@@ -1,0 +1,6 @@
+include LICENSE
+include README.md
+graft tests
+prune .code2skill
+prune tests/__pycache__
+global-exclude __pycache__ *.py[cod]
