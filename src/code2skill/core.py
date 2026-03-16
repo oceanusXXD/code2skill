@@ -24,7 +24,6 @@ from .extractors.python_extractor import PythonExtractor
 from .git_client import GitClient, parse_unified_diff
 from .impact import ImpactAnalyzer
 from .import_graph import ImportGraph
-from .llm_backend import build_llm_backend
 from .models import (
     CachedFileRecord,
     ConfigSummary,
@@ -51,8 +50,6 @@ from .renderers.markdown_renderer import (
 from .scanner.budget import BudgetManager
 from .scanner.prioritizer import FilePrioritizer
 from .scanner.repository import RepositoryScanner
-from .skill_generator import SkillGenerator, match_planned_skills
-from .skill_planner import SkillPlanner, load_skill_plan, render_skill_plan
 from .state_store import StateStore
 
 
@@ -768,6 +765,9 @@ def _build_skill_artifacts(
     affected_files: list[str],
     affected_skill_names: list[str],
 ) -> dict[str, str]:
+    from .skill_generator import SkillGenerator, match_planned_skills
+    from .skill_planner import SkillPlanner, load_skill_plan, render_skill_plan
+
     backend = build_llm_backend(
         provider=config.run.llm_provider,
         model=config.run.llm_model,
@@ -844,6 +844,12 @@ def _build_skill_artifacts(
         )
     )
     return artifacts
+
+
+def build_llm_backend(provider: str, model: str | None = None):
+    from .llm_backend import build_llm_backend as _build_llm_backend
+
+    return _build_llm_backend(provider=provider, model=model)
 
 
 def _write_outputs(

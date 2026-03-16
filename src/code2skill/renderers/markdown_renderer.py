@@ -22,7 +22,7 @@ def render_project_summary(blueprint: SkillBlueprint) -> str:
         lines.extend(f"- {entrypoint}" for entrypoint in entrypoints)
     else:
         lines.append("- none detected")
-        lines.extend(
+    lines.extend(
         [
             "",
             "## Directory Summary",

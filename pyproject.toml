@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code2skill"
-version = "0.3.0"
+version = "0.1.0"
 description = "Turn a code repository into structured AI skill context."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -19,7 +19,9 @@ dependencies = [
 keywords = ["ai", "cli", "developer-tools", "skills"]
 classifiers = [
   "Development Status :: 3 - Alpha",
+  "Environment :: Console",
   "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
   "Programming Language :: Python :: 3",
   "Programming Language :: Python :: 3 :: Only",
   "Programming Language :: Python :: 3.10",
@@ -32,11 +34,14 @@ classifiers = [
 [project.urls]
 Homepage = "https://github.com/oceanusXXD/code2skill"
 Repository = "https://github.com/oceanusXXD/code2skill"
+Documentation = "https://github.com/oceanusXXD/code2skill#readme"
 Issues = "https://github.com/oceanusXXD/code2skill/issues"
 
 [project.optional-dependencies]
 dev = [
+  "build>=1.2",
   "pytest>=8.0",
+  "twine>=6.0",
 ]
 
 [project.scripts]

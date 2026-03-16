@@ -3,18 +3,18 @@ from __future__ import annotations
 import hashlib
 import json
 import re
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 
+from . import __version__ as CODE2SKILL_VERSION
 from .config import infer_language
 from .extractors.config_extractor import ConfigExtractor
 from .extractors.python_extractor import PythonExtractor
 from .json_utils import parse_json_object
 from .llm_backend import LLMBackend
 from .models import (
-    CachedFileRecord,
     ConfigSummary,
     FileCandidate,
     FileDiffPatch,
@@ -29,15 +29,33 @@ from .models import (
 from .scanner.prioritizer import FilePrioritizer
 
 
-SKILL_SYSTEM = (
-    "你是一个严格的项目规范分析器。"
-    "你只能根据给出的代码、骨架摘要和规则生成 Skill 文档。"
-    "默认使用中文，不要使用 emoji，不要补造不存在的模块、框架、语言、流程、未来计划或最佳实践。"
+GenerationPromptBuilder = Callable[
+    [SkillBlueprint, SkillPlanEntry, list[dict[str, str]], list[RuleSummary]],
+    str,
+]
+IncrementalPromptBuilder = Callable[
+    [
+        SkillBlueprint,
+        SkillPlanEntry,
+        str,
+        list[FileDiffPatch],
+        StateSnapshot | None,
+        "ParsedSkillDocument",
+    ],
+    str,
+]
+
+
+DEFAULT_SKILL_SYSTEM_PROMPT = (
+    "You are a strict repository standards analyst. "
+    "Generate skill documents only from the provided code, skeleton summaries, "
+    "and repository rules. Do not invent modules, frameworks, workflows, future "
+    "plans, or best practices that are not grounded in the input. Do not use emoji."
 )
-INCREMENTAL_SYSTEM = (
-    "你是一个严格的项目规范分析器。"
-    "你要根据变更内容修订现有 Skill 文档，不保留已经失效的规则。"
-    "默认使用中文，不要使用 emoji，不要补造上下文中没有的内容。"
+DEFAULT_INCREMENTAL_SYSTEM_PROMPT = (
+    "You are a strict repository standards analyst. "
+    "Revise the existing skill document only where the supplied code changes justify it. "
+    "Remove invalidated rules instead of preserving stale guidance. Do not use emoji."
 )
 
 _EMOJI_RE = re.compile(
@@ -51,16 +69,11 @@ _EMOJI_RE = re.compile(
 )
 _LOW_VALUE_RULE_PATTERNS = [
     re.compile(r"from __future__ import annotations", flags=re.IGNORECASE),
-    re.compile(r"导入\s+`?Path`?", flags=re.IGNORECASE),
-    re.compile(r"import\s+`?Path`?", flags=re.IGNORECASE),
-    re.compile(r"import\s+排序", flags=re.IGNORECASE),
-    re.compile(r"导入顺序", flags=re.IGNORECASE),
+    re.compile(r"\bimport(?:s|ing)?\s+path\b", flags=re.IGNORECASE),
+    re.compile(r"\bpath\b.*\bimport", flags=re.IGNORECASE),
+    re.compile(r"\bimport\s+order\b", flags=re.IGNORECASE),
+    re.compile(r"\bempty\s+__init__\.py\b", flags=re.IGNORECASE),
 ]
-
-try:
-    CODE2SKILL_VERSION = version("code2skill")
-except PackageNotFoundError:
-    CODE2SKILL_VERSION = "0.3.0"
 
 
 @dataclass
@@ -83,11 +96,25 @@ class SkillGenerator:
         repo_path: Path,
         output_dir: Path,
         max_inline_chars: int,
+        system_prompt: str | None = None,
+        generation_prompt_builder: GenerationPromptBuilder | None = None,
+        incremental_system_prompt: str | None = None,
+        incremental_prompt_builder: IncrementalPromptBuilder | None = None,
     ) -> None:
         self.backend = backend
         self.repo_path = repo_path
         self.output_dir = output_dir
         self.max_inline_chars = max_inline_chars
+        self.system_prompt = system_prompt or DEFAULT_SKILL_SYSTEM_PROMPT
+        self.generation_prompt_builder = (
+            generation_prompt_builder or build_default_generation_prompt
+        )
+        self.incremental_system_prompt = (
+            incremental_system_prompt or DEFAULT_INCREMENTAL_SYSTEM_PROMPT
+        )
+        self.incremental_prompt_builder = (
+            incremental_prompt_builder or build_default_incremental_prompt
+        )
         self.config_extractor = ConfigExtractor()
         self.python_extractor = PythonExtractor()
         self.prioritizer = FilePrioritizer()
@@ -117,10 +144,7 @@ class SkillGenerator:
     ) -> dict[str, str]:
         affected = set(affected_skill_names)
         changed = set(changed_files)
-        changed_by_path = {
-            item.path: item
-            for item in changed_diffs
-        }
+        changed_by_path = {item.path: item for item in changed_diffs}
         recommendations = {
             item.name: item
             for item in blueprint.recommended_skills
@@ -197,13 +221,13 @@ class SkillGenerator:
             if (entry := self._load_file_context(path)) is not None
         ]
         relevant_rules = filter_rules_by_skill(blueprint.abstract_rules, skill)
-        prompt = self._build_generation_prompt(
-            blueprint=blueprint,
-            skill=skill,
-            context_files=context_files,
-            relevant_rules=relevant_rules,
+        prompt = self.generation_prompt_builder(
+            blueprint,
+            skill,
+            context_files,
+            relevant_rules,
         )
-        raw = self.backend.complete(prompt=prompt, system=SKILL_SYSTEM)
+        raw = self.backend.complete(prompt=prompt, system=self.system_prompt)
         return _sanitize_markdown(raw)
 
     def _update_skill(
@@ -215,92 +239,26 @@ class SkillGenerator:
         previous_state: StateSnapshot | None,
     ) -> str:
         existing_document = _parse_skill_document(existing_skill_md)
-        change_sections: list[str] = []
-        for diff_entry in changed_diffs:
-            before_path = diff_entry.previous_path or diff_entry.path
-            before = (
-                "[新增文件]"
-                if diff_entry.change_type == "add"
-                else self._load_previous_context(before_path, previous_state)
-            )
-            after = (
-                None
-                if diff_entry.change_type == "delete"
-                else self._load_file_context(diff_entry.path)
-            )
-            metadata = [
-                f"--- {diff_entry.path} ---",
-                f"change_type: {diff_entry.change_type}",
-            ]
-            if diff_entry.previous_path is not None:
-                metadata.append(f"previous_path: {diff_entry.previous_path}")
-            change_sections.append(
-                "\n".join(
-                    [
-                        *metadata,
-                        "统一 diff：",
-                        diff_entry.patch.strip() or "[空补丁]",
-                        "",
-                        "变更前骨架：",
-                        before,
-                        "",
-                        "变更后骨架：",
-                        after["content"] if after is not None else "[文件已删除]",
-                    ]
-                )
-            )
-
-        prompt = f"""
-以下是该 Skill 当前的内容：
-{existing_skill_md}
-
-Skill 元信息：
-- 名称: {skill.name}
-- 标题: {skill.title}
-- 范围: {skill.scope}
-- 规划原因: {skill.why}
-
-当前可更新的 section 标题：
-{chr(10).join(f"- {section.heading}" for section in existing_document.sections) or "[无可用 section]"}
-
-以下文件发生了变更：
-
-{chr(10).join(change_sections)}
-
-已知项目上下文：
-- 项目类型: {blueprint.project_profile.repo_type}
-- 技术栈: {json.dumps(blueprint.tech_stack, ensure_ascii=False)}
-
-修订要求：
-1. 只根据当前 Skill 内容和上述变更文件修订，不要重写成全新的文档风格
-2. 只修改受到变更影响的规则、流程、示例和反模式
-3. 保留仍然有效的内容，删除已经失效的规则
-4. 无法确认是否仍然成立的地方，写成 [待确认]
-5. 只有代码明确体现时，才使用“必须”“禁止”“统一”等强措辞
-6. 优先保留行为约束、调用顺序、扩展点、数据契约，不要把语法习惯或偶然共性升级为规则
-7. 不要增加额外章节，不要使用 emoji，不要加入未来计划、扩展建议、总结
-7. 只返回受到影响的 section，不要返回完整文档
-8. section 标题必须来自现有 section 列表
-
-输出严格 JSON：
-{{
-  "updated_sections": [
-    {{
-      "heading": "section 标题",
-      "content": "完整 section Markdown，必须以 ## {{heading}} 开头"
-    }}
-  ]
-}}
-""".strip()
-        raw = self.backend.complete(prompt=prompt, system=INCREMENTAL_SYSTEM)
+        prompt = self.incremental_prompt_builder(
+            blueprint,
+            skill,
+            existing_skill_md,
+            changed_diffs,
+            previous_state,
+            existing_document,
+        )
+        raw = self.backend.complete(
+            prompt=prompt,
+            system=self.incremental_system_prompt,
+        )
         payload = parse_json_object(
             raw,
             error_context="Incremental skill update response was not valid JSON",
             backend=self.backend,
             expected_top_level_key="updated_sections",
             repair_hint=(
-                "输出必须是 {\"updated_sections\": [...]} 结构；"
-                "每个 section 项保留 heading 和 content。"
+                "The output must be a JSON object with an 'updated_sections' array. "
+                "Each item must include heading and content."
             ),
         )
         updated_sections = payload.get("updated_sections", [])
@@ -310,86 +268,6 @@ Skill 元信息：
             existing_document=existing_document,
             updated_sections=updated_sections,
         )
-
-    def _build_generation_prompt(
-        self,
-        blueprint: SkillBlueprint,
-        skill: SkillPlanEntry,
-        context_files: list[dict[str, str]],
-        relevant_rules: list[RuleSummary],
-    ) -> str:
-        rendered_rules = "\n".join(
-            [
-                (
-                    f"- {rule.name}: {rule.rule} "
-                    f"(confidence={rule.confidence:.0%}; source={rule.source}; "
-                    f"evidence={', '.join(rule.evidence) or '[none]'})"
-                )
-                for rule in relevant_rules
-            ]
-        ) or "[未匹配到明确规则]"
-        rendered_files = "\n\n".join(
-            [
-                f"--- {item['path']} ---\n{item['content']}"
-                for item in context_files
-            ]
-        ) or "[没有可用的关键文件内容]"
-
-        return f"""
-你是一个项目规范分析器。根据以下代码文件，生成一份供 AI 编程助手消费的 Skill 规范文档。
-
-项目类型: {blueprint.project_profile.repo_type}
-技术栈: {json.dumps(blueprint.tech_stack, ensure_ascii=False)}
-Skill 名称: {skill.name}
-Skill 标题: {skill.title}
-此 Skill 聚焦: {skill.scope}
-为什么需要它: {skill.why}
-阅读计划说明: {skill.read_reason}
-
-已知的结构性规则：
-{rendered_rules}
-
-以下是此领域的关键代码文件：
-
-{rendered_files}
-
-写作硬约束：
-1. 只基于上面的规则和文件内容推断，不要编造不存在的模式、框架、目录、设计目标或未来规划
-2. 默认使用中文，保留英文代码标识符、路径、类名、函数名
-3. 不要使用 emoji、勾选符号或装饰性标记
-4. 不要输出额外章节；只允许输出下面列出的 5 个章节
-5. 每条“核心规则”都必须带来源文件路径；如果能定位到类、函数或符号，直接写出符号名
-6. 只有在代码明确体现时，才使用“必须”“禁止”“统一”“总是”等强措辞
-7. 如果只能看出“当前常见写法”，请明确写成“当前样例显示”“现有实现通常”“倾向于”，不要上升为硬约束
-8. 如果证据不足，请明确标注 [待确认]
-9. 不要复述通用工程最佳实践；只写这个仓库已经体现出来的做法
-10. 不要引入当前上下文中没有出现的技术名词或框架名
-11. 核心规则优先提炼行为边界、调用顺序、模块边界、数据契约、扩展点
-12. 不要把 `from __future__ import annotations`、普通类型注解、常规 import 排序、空的 `__init__.py`、文件恰好都导入 `Path` 这类表面共性写成核心规则，除非它直接影响行为或扩展接口
-13. 核心规则控制在 4-6 条，宁缺毋滥
-
-请生成 Markdown 格式的 Skill 文档，严格使用以下结构：
-
-# {skill.title}
-
-## 概述
-1-2 句话说明这个领域在项目中的角色和重要性。
-
-## 核心规则
-- 使用单层列表
-- 每条规则必须具体、可执行，并在同一条中写明“来源: 路径[:符号]”
-- 如果某条规则只被部分样例支持，要写清楚适用范围或标记 [待确认]
-- 不要把纯语法、纯格式或偶然共性写成规则
-
-## 典型模式
-用 1-3 个短代码片段展示标准写法，并在片段前说明来源文件。
-
-## 避免的写法
-只写能从当前代码推断出的反模式；如果证据不足，写一条 “[待确认] 当前上下文不足以稳定归纳反模式”。
-
-## 常见流程
-如果该领域有固定操作步骤，写成 step-by-step；如果没有稳定流程，写一条 “[待确认] 当前上下文没有显示稳定流程”。
-""".strip()
 
     def _load_file_context(self, relative_path: str) -> dict[str, str] | None:
         absolute_path = self.repo_path / Path(relative_path)
@@ -402,22 +280,6 @@ Skill 标题: {skill.title}
             "path": relative_path,
             "content": self._build_skeleton_from_content(relative_path, content),
         }
-
-    def _load_previous_context(
-        self,
-        relative_path: str,
-        previous_state: StateSnapshot | None,
-    ) -> str:
-        if previous_state is None:
-            return "[历史版本不可用]"
-        record = previous_state.files.get(relative_path)
-        if record is None:
-            return "[历史版本不可用]"
-        if record.config_summary is not None:
-            return _render_config_summary(record.config_summary)
-        if record.source_summary is not None:
-            return _render_source_summary(record.source_summary)
-        return "[历史版本不可用]"
 
     def _build_skeleton_from_content(self, relative_path: str, content: str) -> str:
         relative = Path(relative_path)
@@ -445,14 +307,181 @@ Skill 标题: {skill.title}
         return content[: self.max_inline_chars]
 
 
+def build_default_generation_prompt(
+    blueprint: SkillBlueprint,
+    skill: SkillPlanEntry,
+    context_files: list[dict[str, str]],
+    relevant_rules: list[RuleSummary],
+) -> str:
+    rendered_rules = "\n".join(
+        [
+            (
+                f"- {rule.name}: {rule.rule} "
+                f"(confidence={rule.confidence:.0%}; source={rule.source}; "
+                f"evidence={', '.join(rule.evidence) or '[none]'})"
+            )
+            for rule in relevant_rules
+        ]
+    ) or "[no explicit repository rules matched]"
+    rendered_files = "\n\n".join(
+        [
+            f"--- {item['path']} ---\n{item['content']}"
+            for item in context_files
+        ]
+    ) or "[no readable file context available]"
+
+    return f"""
+You are a repository standards analyst. Generate one Skill document for an AI coding assistant using only the evidence below.
+
+Project type: {blueprint.project_profile.repo_type}
+Tech stack: {json.dumps(blueprint.tech_stack, ensure_ascii=False)}
+Skill name: {skill.name}
+Skill title: {skill.title}
+Skill scope: {skill.scope}
+Why this skill exists: {skill.why}
+Read-plan rationale: {skill.read_reason}
+
+Known repository rules:
+{rendered_rules}
+
+Relevant code and skeleton context:
+
+{rendered_files}
+
+Hard requirements:
+1. Infer only from the provided rules and file context.
+2. Do not invent missing modules, frameworks, workflows, directories, design goals, or future plans.
+3. Write the final Skill document in English.
+4. Do not use emoji, decorative symbols, or extra headings.
+5. Output exactly the 5 sections listed below and nothing else.
+6. Every bullet under "Core Rules" must include a source path in the same bullet.
+7. Use strong wording such as "must", "never", or "always" only when the code clearly supports it.
+8. If the evidence only shows a common pattern instead of a hard rule, say so explicitly.
+9. Mark uncertainty as [Needs confirmation].
+10. Prefer behavior constraints, call order, module boundaries, data contracts, and extension points over style trivia.
+11. Do not turn `from __future__ import annotations`, routine typing, import ordering, empty `__init__.py`, or a shared `Path` import into a rule unless it materially affects behavior.
+12. Keep "Core Rules" to 4-6 high-value bullets.
+
+Return Markdown with exactly this structure:
+
+# {skill.title}
+
+## Overview
+Write 1-2 sentences describing the role and importance of this area in the repository.
+
+## Core Rules
+- Use a single-level bullet list.
+- Each bullet must be concrete, actionable, and include "Source: path[:symbol]".
+- If a rule is only partially supported, describe the scope or mark it [Needs confirmation].
+- Do not turn syntax trivia or accidental similarity into a rule.
+
+## Typical Patterns
+Show 1-3 short code snippets. Explain the source file before each snippet.
+
+## Avoid
+List only anti-patterns that can be inferred from the current code. If evidence is insufficient, write one bullet: "[Needs confirmation] The current context is not sufficient to derive a stable anti-pattern."
+
+## Common Flows
+If this area has a stable operational flow, write it step by step. Otherwise write one bullet: "[Needs confirmation] The current context does not show a stable flow."
+""".strip()
+
+
+def build_default_incremental_prompt(
+    blueprint: SkillBlueprint,
+    skill: SkillPlanEntry,
+    existing_skill_md: str,
+    changed_diffs: list[FileDiffPatch],
+    previous_state: StateSnapshot | None,
+    existing_document: ParsedSkillDocument,
+) -> str:
+    change_sections: list[str] = []
+    for diff_entry in changed_diffs:
+        before_path = diff_entry.previous_path or diff_entry.path
+        before = (
+            "[new file]"
+            if diff_entry.change_type == "add"
+            else _load_previous_context(before_path, previous_state)
+        )
+        if diff_entry.change_type == "delete":
+            after = "[file deleted]"
+        else:
+            after = (
+                _load_current_context(previous_state, blueprint, diff_entry.path)
+                or "[current version unavailable]"
+            )
+        metadata = [
+            f"--- {diff_entry.path} ---",
+            f"change_type: {diff_entry.change_type}",
+        ]
+        if diff_entry.previous_path is not None:
+            metadata.append(f"previous_path: {diff_entry.previous_path}")
+        change_sections.append(
+            "\n".join(
+                [
+                    *metadata,
+                    "Unified diff:",
+                    diff_entry.patch.strip() or "[empty patch]",
+                    "",
+                    "Before:",
+                    before,
+                    "",
+                    "After:",
+                    after,
+                ]
+            )
+        )
+
+    return f"""
+Here is the current Skill document:
+{existing_skill_md}
+
+Skill metadata:
+- Name: {skill.name}
+- Title: {skill.title}
+- Scope: {skill.scope}
+- Why it exists: {skill.why}
+
+Existing section headings that may be updated:
+{chr(10).join(f"- {section.heading}" for section in existing_document.sections) or "[none]"}
+
+Changed files and supporting context:
+
+{chr(10).join(change_sections)}
+
+Repository context:
+- Project type: {blueprint.project_profile.repo_type}
+- Tech stack: {json.dumps(blueprint.tech_stack, ensure_ascii=False)}
+
+Revision requirements:
+1. Update only the parts justified by the supplied file changes.
+2. Preserve still-valid content and remove rules that are no longer supported.
+3. Do not rewrite the whole document into a new style.
+4. Keep the final content in English.
+5. Use [Needs confirmation] where the change makes a previous rule uncertain.
+6. Use strong wording only when the changed code clearly supports it.
+7. Do not add new sections or use emoji.
+8. Return only the affected sections, not the full document.
+9. Each section heading must come from the existing section list.
+
+Return strict JSON:
+{{
+  "updated_sections": [
+    {{
+      "heading": "section heading",
+      "content": "full section markdown that starts with ## {{heading}}"
+    }}
+  ]
+}}
+""".strip()
+
+
 def match_planned_skills(affected_files: list[str], plan: SkillPlan) -> list[str]:
     affected = set(affected_files)
-    matched = [
+    return [
         skill.name
         for skill in plan.skills
         if affected & set(skill.read_files)
     ]
-    return matched
 
 
 def filter_rules_by_skill(
@@ -501,15 +530,51 @@ def render_skill_index(plan: SkillPlan) -> str:
             for skill in plan.skills
         ]
     )
-    return f"""# 项目 Skill 索引
+    return f"""# Project Skill Index
 
-| Skill | 范围 | 文件 |
+| Skill | Scope | File |
 |---|---|---|
 {rows}
 
-生成时间: {datetime.now(timezone.utc).isoformat()}
-生成工具: code2skill v{CODE2SKILL_VERSION}
+Generated at: {datetime.now(timezone.utc).isoformat()}
+Generated by: code2skill v{CODE2SKILL_VERSION}
 """.strip() + "\n"
+
+
+def _load_current_context(
+    previous_state: StateSnapshot | None,
+    blueprint: SkillBlueprint,
+    relative_path: str,
+) -> str | None:
+    repo_root = None
+    if previous_state is not None:
+        repo_root = Path(previous_state.repo_root)
+    elif blueprint.project_profile.entrypoints:
+        repo_root = Path.cwd()
+
+    if repo_root is None:
+        return None
+
+    absolute_path = repo_root / Path(relative_path)
+    if not absolute_path.exists() or not absolute_path.is_file():
+        return None
+    return absolute_path.read_text(encoding="utf-8", errors="ignore")
+
+
+def _load_previous_context(
+    relative_path: str,
+    previous_state: StateSnapshot | None,
+) -> str:
+    if previous_state is None:
+        return "[previous version unavailable]"
+    record = previous_state.files.get(relative_path)
+    if record is None:
+        return "[previous version unavailable]"
+    if record.config_summary is not None:
+        return _render_config_summary(record.config_summary)
+    if record.source_summary is not None:
+        return _render_source_summary(record.source_summary)
+    return "[previous version unavailable]"
 
 
 def _parse_skill_document(markdown: str) -> ParsedSkillDocument:
@@ -557,8 +622,8 @@ def _parse_skill_document(markdown: str) -> ParsedSkillDocument:
         body = "\n".join(lines[1:]).strip()
         sections.append(
             SkillDocumentSection(
-                heading="正文",
-                content=f"## 正文\n{body}".strip(),
+                heading="Body",
+                content=f"## Body\n{body}".strip(),
             )
         )
 
@@ -658,9 +723,7 @@ def _render_source_summary(summary: SourceFileSummary) -> str:
             "routes:",
         ]
         + (route_lines or ["-"])
-        + [
-            f"notes: {', '.join(summary.notes) or '-'}",
-        ]
+        + [f"notes: {', '.join(summary.notes) or '-'}"]
     )
 
 
@@ -689,9 +752,12 @@ def _remove_low_value_core_rules(text: str) -> str:
         stripped = line.strip()
         if stripped.startswith("## "):
             if in_core_rules and kept_rule_count == 0:
-                cleaned_lines.append("- [待确认] 当前上下文不足以稳定提炼高价值规则")
-            in_core_rules = stripped == "## 核心规则"
-            kept_rule_count = 0 if in_core_rules else kept_rule_count
+                cleaned_lines.append(
+                    "- [Needs confirmation] The current context is not sufficient to derive high-value rules."
+                )
+            in_core_rules = stripped == "## Core Rules"
+            if in_core_rules:
+                kept_rule_count = 0
             cleaned_lines.append(line)
             continue
 
@@ -703,7 +769,9 @@ def _remove_low_value_core_rules(text: str) -> str:
         cleaned_lines.append(line)
 
     if in_core_rules and kept_rule_count == 0:
-        cleaned_lines.append("- [待确认] 当前上下文不足以稳定提炼高价值规则")
+        cleaned_lines.append(
+            "- [Needs confirmation] The current context is not sufficient to derive high-value rules."
+        )
 
     return "\n".join(cleaned_lines).strip() + "\n"
 
