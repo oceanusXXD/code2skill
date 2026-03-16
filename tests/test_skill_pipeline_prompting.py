@@ -157,15 +157,15 @@ def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
           "skills": [
             {
               "name": "Scanner Flow",
-              "title": "扫描流程 ✅",
-              "scope": "围绕 src/code2skill/scanner 和入口文件",
-              "why": "需要理解扫描主路径 ✅",
+              "title": "Scanner Flow ✨",
+              "scope": "CLI entrypoint and repository scanning",
+              "why": "Explains the main scan path ✨",
               "read_files": [
                 "src/code2skill/cli.py",
                 "src/code2skill/scanner/repository.py",
                 "missing.py"
               ],
-              "read_reason": "入口与扫描器 ✅"
+              "read_reason": "Entry path and scanner implementation ✨"
             }
           ]
         }
@@ -176,19 +176,19 @@ def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
     plan = planner.plan(_sample_blueprint(), repo_path=tmp_path)
 
     assert plan.skills[0].name == "scanner-flow"
-    assert plan.skills[0].title == "扫描流程"
-    assert plan.skills[0].why == "需要理解扫描主路径"
-    assert plan.skills[0].read_reason == "入口与扫描器"
+    assert plan.skills[0].title == "Scanner Flow"
+    assert plan.skills[0].why == "Explains the main scan path"
+    assert plan.skills[0].read_reason == "Entry path and scanner implementation"
     assert plan.skills[0].read_files == [
         "src/code2skill/cli.py",
         "src/code2skill/scanner/repository.py",
     ]
 
     prompt = str(backend.calls[0]["prompt"])
-    assert "关键配置：" in prompt
-    assert "依赖关系摘要：" in prompt
-    assert "启发式推荐（低优先级参考，不要盲从）" in prompt
-    assert "按包边界、目录边界、依赖簇、稳定流程" in prompt
+    assert "Key configuration:" in prompt
+    assert "Dependency summary:" in prompt
+    assert "Heuristic recommendations (low-priority reference, do not follow blindly):" in prompt
+    assert "Prefer package boundaries, directory boundaries, dependency clusters, and stable workflows over generic labels." in prompt
 
 
 def test_skill_generator_prompt_and_output_are_evidence_driven(
@@ -201,27 +201,26 @@ def test_skill_generator_prompt_and_output_are_evidence_driven(
     output_dir = tmp_path / ".code2skill"
     backend = MockBackend(
         """
-        # 扫描流程规范 ✅
+        # Scanner Flow Guide ✨
+        ## Overview
+        This area defines the command entrypoint.
 
-        ## 概述
-        负责命令入口。
+        ## Core Rules
+        - Every file must start with `from __future__ import annotations`. Source: src/code2skill/cli.py
+        - Enter the scan flow through `main()`. Source: src/code2skill/cli.py:main
 
-        ## 核心规则
-        - 所有模块必须以 `from __future__ import annotations` 开头；来源: src/code2skill/cli.py
-        - 规则：从 `main()` 进入扫描流程；来源: src/code2skill/cli.py:main
-
-        ## 典型模式
-        来源: src/code2skill/cli.py
+        ## Typical Patterns
+        Source: src/code2skill/cli.py
         ```python
         def main() -> None:
             run_scan()
         ```
 
-        ## 避免的写法
-        - [待确认] 当前上下文不足以稳定归纳反模式
+        ## Avoid
+        - [Needs confirmation] The current context is not sufficient to derive a stable anti-pattern.
 
-        ## 常见流程
-        1. 调用 `main()`
+        ## Common Flows
+        1. Call `main()`.
         """
     )
     generator = SkillGenerator(
@@ -236,24 +235,24 @@ def test_skill_generator_prompt_and_output_are_evidence_driven(
             skills=[
                 SkillPlanEntry(
                     name="scanner-flow",
-                    title="扫描流程规范",
-                    scope="命令入口与扫描调度",
-                    why="这是用户触发扫描的入口",
+                    title="Scanner Flow Guide",
+                    scope="Command entrypoint and scan orchestration",
+                    why="This is the user-visible entry into the scan flow",
                     read_files=["src/code2skill/cli.py"],
-                    read_reason="入口文件定义了用户可见的扫描调用方式",
+                    read_reason="The entrypoint defines how the scan is invoked",
                 )
             ]
         ),
     )
 
     content = artifacts["skills/scanner-flow.md"]
-    assert "✅" not in content
-    assert "# 扫描流程规范" in content
+    assert "✨" not in content
+    assert "# Scanner Flow Guide" in content
     assert "from __future__ import annotations" not in content
     prompt = str(backend.calls[0]["prompt"])
-    assert "不要输出额外章节" in prompt
-    assert "不要使用 emoji" in prompt
-    assert "只有在代码明确体现时，才使用“必须”“禁止”" in prompt
+    assert "Do not use emoji, decorative symbols, or extra headings." in prompt
+    assert "Output exactly the 5 sections listed below and nothing else." in prompt
+    assert 'Every bullet under "Core Rules" must include a source path in the same bullet.' in prompt
 
 
 def _sample_blueprint() -> SkillBlueprint:
@@ -267,7 +266,7 @@ def _sample_blueprint() -> SkillBlueprint:
             entrypoints=["src/code2skill/cli.py"],
             evidence=["pyproject.toml", "src/code2skill/cli.py"],
         ),
-        tech_stack={"languages": ["python"], "tools": ["click"]},
+        tech_stack={"languages": ["python"], "tools": ["argparse"]},
         domains=[
             DomainSummary(
                 name="core",
@@ -300,7 +299,7 @@ def _sample_blueprint() -> SkillBlueprint:
                 path="pyproject.toml",
                 kind="pyproject",
                 summary="Project metadata and CLI entrypoint",
-                framework_signals=["click"],
+                framework_signals=["argparse"],
                 entrypoints=["src/code2skill/cli.py"],
             )
         ],
@@ -328,8 +327,8 @@ def _sample_blueprint() -> SkillBlueprint:
         abstract_rules=[
             RuleSummary(
                 name="cli-entrypoint",
-                rule="扫描命令从 `main()` 进入核心执行路径。",
-                rationale="CLI 文件暴露单一入口函数。",
+                rule="The scan command enters the main execution path through `main()`.",
+                rationale="The CLI module exposes a single entry function.",
                 evidence_files=["src/code2skill/cli.py"],
                 source="pattern_detection",
                 confidence=0.8,
@@ -338,8 +337,8 @@ def _sample_blueprint() -> SkillBlueprint:
         concrete_workflows=[
             WorkflowSummary(
                 name="run-scan",
-                summary="从 CLI 进入扫描流程",
-                steps=["解析参数", "调用扫描入口"],
+                summary="Enter the scan flow from the CLI layer",
+                steps=["parse arguments", "call the scan entrypoint"],
                 evidence=["src/code2skill/cli.py", "src/code2skill/core.py"],
             )
         ],

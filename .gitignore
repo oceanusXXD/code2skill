@@ -2,7 +2,11 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
+# Generated analysis and Skill outputs.
 .code2skill/
 .code2skill-*/
+# Local release/smoke environments.
+.pypi-smoke/
+.pypi-smoke-out/
 build/
 dist/

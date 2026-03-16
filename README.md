@@ -1,38 +1,59 @@
 # code2skill
 
-中文优先，英文补充。
-Chinese first, with an English quick reference later in this document.
+中文优先，后附英文快速说明。
+Chinese first, with an English quick reference at the end.
 
-`code2skill` 是一个 Python CLI，用来把真实代码仓库编译成一组可供 AI 编程助手消费的结构化项目知识与 Skill 文档。
-它的目标不是“总结仓库”，而是产出可以直接用于后续编码、审查、增量更新的上下文。
+`code2skill` 是一个面向 Python 仓库的 CLI。它会把真实代码仓库编译成一组结构化项目知识和 Skill 文档，供 Cursor、Claude Code、Codex、Copilot、Windsurf 等 AI 编程助手消费。
 
-`code2skill` is a Python CLI that turns a real repository into structured project knowledge and Skill documents for downstream AI coding agents.
+它的目标不是“总结仓库”，而是生成能直接用于后续编码、审查和增量更新的高密度上下文。
 
-## 当前状态
+## 适用范围
 
-当前版本可以用于首次全量生成，也可以用于后续增量 CI/CD。
-
-已验证的两条路径：
-- 首次运行：`scan` 可以在没有历史状态时完成完整 Phase 1/2/3，生成 `skill-blueprint.json`、`skill-plan.json`、`skills/*.md`。
-- 后续运行：在保留上一轮 `.code2skill/state/analysis-state.json` 和 `skill-plan.json` 的前提下，`ci --mode auto` 可以根据 diff 进入 `incremental` 模式，只重写受影响的 Skill。
-
-要让增量模式在 CI runner 上稳定工作，需要满足这几个前提：
-- 仓库是 Git 仓库，或者你显式传入 `--diff-file`
-- 能获取有效 diff：推荐 `fetch-depth: 0`，或者显式传入 `--base-ref`
-- 恢复上一轮输出目录中的状态文件：至少是 `.code2skill/state/analysis-state.json`
-- 如果希望增量修订现有 Skill，而不是重新规划，最好同时恢复 `.code2skill/skill-plan.json` 和 `.code2skill/skills/`
-
-如果这些条件不满足，当前实现会自动回退到全量模式，而不是静默失败。
-
-## 特性概览
-
-- 仅面向 Python 仓库
+- 当前只面向 Python 仓库
 - Phase 1 不调用 LLM
-- Python 源码使用 `ast` 做骨架提取
-- 内置 import graph、角色修正、模式检测
-- 支持 `scan`、`ci`、`estimate`、`adapt`
+- Python 源码使用 `ast` 做结构提取
+- 支持 `scan`、`estimate`、`ci`、`adapt`
 - 支持 `openai`、`claude`、`qwen`
-- 输出默认中文，不使用 emoji，证据不足的地方标记 `[待确认]`
+- 默认使用英文 prompt 和英文 Skill 输出，不使用 emoji，证据不足处标记 `[Needs confirmation]`
+
+## 核心特性
+
+- 结构扫描：目录发现、过滤、预算裁剪、Python 骨架提取
+- 结构分析：import graph、角色修正、模式检测、抽象规则提炼
+- Skill 规划：用 1 次 LLM 调用决定生成哪些 Skill、每个 Skill 读哪些文件
+- Skill 生成：按 Skill 聚焦上下文逐个生成高质量 Markdown
+- 增量更新：在 CI 中根据 Git diff 只重写受影响的 Skill
+- 目标适配：把 `skills/*.md` 复制或合并到 Cursor / Codex / Claude 等约定位置
+
+## 30 秒上手
+
+先设置模型环境变量：
+
+```bash
+export QWEN_API_KEY=...
+export CODE2SKILL_LLM=qwen
+export CODE2SKILL_MODEL=qwen-plus
+```
+
+进入要分析的仓库目录后直接运行：
+
+```bash
+code2skill scan
+```
+
+现在 `repo_path` 默认就是当前目录，所以在仓库根目录里不需要再写 `.`。
+
+如果只想先做结构扫描：
+
+```bash
+code2skill scan --structure-only
+```
+
+如果已经有历史状态，想走自动增量：
+
+```bash
+code2skill ci --mode auto
+```
 
 ## 安装
 
@@ -52,104 +73,155 @@ pip install -e .[dev]
 
 ```bash
 code2skill --help
+python -m code2skill --help
 ```
 
-## LLM 后端与密钥
+## 常用环境变量
 
-OpenAI：
+这些变量是为了让本地和 CI 使用更短的命令。
+
+LLM API Key：
 
 ```bash
 export OPENAI_API_KEY=...
-```
-
-Claude：
-
-```bash
 export ANTHROPIC_API_KEY=...
-```
-
-Qwen：
-
-```bash
 export QWEN_API_KEY=...
 ```
 
-说明：
-- `qwen` 默认走阿里国际站兼容接口
-- 当前实现会读取 `QWEN_API_KEY`，也兼容 `DASHSCOPE_API_KEY`
-- 如果没有配置对应环境变量，命令会直接报错
+CLI 默认值：
 
-## 工作流
+```bash
+export CODE2SKILL_LLM=qwen
+export CODE2SKILL_MODEL=qwen-plus
+export CODE2SKILL_OUTPUT_DIR=.code2skill
+export CODE2SKILL_MAX_SKILLS=6
+export CODE2SKILL_BASE_REF=origin/main
+```
+
+说明：
+
+- `qwen` 默认走阿里国际站兼容接口
+- `qwen` 会读取 `QWEN_API_KEY`，也兼容 `DASHSCOPE_API_KEY`
+- 如果没有配置对应 API key，命令会直接报错，不会静默降级
+
+## 命令速查
+
+完整扫描并生成 Skill：
+
+```bash
+code2skill scan --llm qwen --model qwen-plus
+```
+
+只做结构扫描：
+
+```bash
+code2skill scan --structure-only
+```
+
+自动增量：
+
+```bash
+code2skill ci --mode auto --base-ref origin/main
+```
+
+只做成本预估：
+
+```bash
+code2skill estimate
+```
+
+把 Skill 合并到 Codex 规则文件：
+
+```bash
+code2skill adapt --target codex --source-dir .code2skill/skills
+```
+
+适配所有目标：
+
+```bash
+code2skill adapt --target all --source-dir .code2skill/skills
+```
+
+## 工作流说明
 
 ### Phase 1：结构扫描
 
 输入：
-- 本地 Git 仓库路径
+
+- 仓库路径
 
 输出：
+
 - `project-summary.md`
 - `skill-blueprint.json`
-- `references/*.md`
+- `references/architecture.md`
+- `references/code-style.md`
+- `references/workflows.md`
+- `references/api-usage.md`
 - `report.json`
 - `state/analysis-state.json`
 
-主要处理：
+主要步骤：
+
 1. 文件发现与过滤
 2. 粗评分与预算裁剪
-3. Python 骨架提取
+3. Python AST 骨架提取
 4. import graph 构建
-5. 结合图信号做优先级修正
-6. 角色分组与模式检测
+5. 基于结构信号修正优先级和角色
+6. 模式检测与抽象规则提炼
 7. 组装 `SkillBlueprint`
 
 ### Phase 2：Skill 规划
 
 输入：
+
 - `skill-blueprint.json`
 
 输出：
+
 - `skill-plan.json`
 
-主要处理：
-- 根据目录摘要、核心模块、配置、依赖簇、工作流、抽象规则，决定要生成哪些 Skill
-- 每个 Skill 只选必要文件，不全读整仓
+主要步骤：
+
+1. 压缩项目画像、目录摘要、依赖簇、核心模块、规则和流程
+2. 调用 1 次 LLM
+3. 决定要生成哪些 Skill
+4. 为每个 Skill 选出最值得阅读的文件集合
 
 ### Phase 3：Skill 生成
 
 输入：
+
 - `skill-plan.json`
-- 每个 Skill 对应的源码正文或骨架
+- 每个 Skill 对应的文件正文或骨架
 
 输出：
+
 - `skills/index.md`
 - `skills/*.md`
 
-主要处理：
-- 为每个 Skill 生成可被 AI 编程助手消费的 Markdown 规范文档
-- 增量模式下只更新受影响的 Skill
+主要步骤：
 
-### Adapt：输出适配
+1. 按 Skill 收集上下文文件
+2. 筛选与该 Skill 最相关的抽象规则
+3. 调用 LLM 生成 Skill 文档
+4. 在增量模式下只修订受影响的 section
+
+### Adapt：目标格式适配
 
 输入：
+
 - `skills/*.md`
 
 输出：
-- Cursor / Claude / Codex / Copilot / Windsurf 对应位置的规则文件
 
-## 首次使用
+- Cursor：复制到 `.cursor/rules/`
+- Claude：合并为 `CLAUDE.md`
+- Codex：合并为 `AGENTS.md`
+- Copilot：合并为 `.github/copilot-instructions.md`
+- Windsurf：合并为 `.windsurfrules`
 
-推荐先从全量生成开始。
-
-### 方式 1：显式使用 `scan`
-
-```bash
-code2skill scan <repo_path> \
-  --output-dir .code2skill \
-  --llm qwen \
-  --model qwen-plus
-```
-
-这会执行完整 Phase 1/2/3，并写出：
+## 输出目录
 
 ```text
 .code2skill/
@@ -158,88 +230,37 @@ code2skill scan <repo_path> \
   skill-plan.json
   report.json
   references/
+    architecture.md
+    code-style.md
+    workflows.md
+    api-usage.md
   skills/
+    index.md
+    *.md
   state/
     analysis-state.json
 ```
 
-### 方式 2：直接使用 `ci --mode auto`
+## CI / 增量使用建议
 
-```bash
-code2skill ci <repo_path> \
-  --output-dir .code2skill \
-  --mode auto \
-  --llm qwen \
-  --model qwen-plus
-```
+推荐把 `.code2skill/` 当成 CI cache 或 artifact，而不是提交进仓库。
 
-在首次运行时，如果没有历史状态，当前实现会自动回退到全量模式。
-所以对 CI 而言，首次运行直接用 `ci --mode auto` 也可以。
+增量模式依赖这些文件：
 
-## 后续增量使用
+- `.code2skill/state/analysis-state.json`
+- `.code2skill/skill-plan.json`
+- 最好同时恢复 `.code2skill/skills/`
 
-### 本地增量
+如果这些文件缺失，或者 diff 条件不满足，`ci --mode auto` 会自动回退到全量模式。
 
-如果你在同一个仓库里已经跑过一次，并且 `.code2skill/state/analysis-state.json` 还在，可以直接：
+### 自动回退到全量的常见情况
 
-```bash
-code2skill ci <repo_path> \
-  --output-dir .code2skill \
-  --mode auto \
-  --llm qwen \
-  --model qwen-plus
-```
-
-当前实现会：
-1. 读取上一次的 `analysis-state.json`
-2. 计算从上次 `head_commit` 到当前工作树的 diff
-3. 识别受影响文件
-4. 将受影响文件映射到受影响 Skill
-5. 只重写这些 Skill
-
-### 显式指定基线
-
-如果你更想显式指定 diff 基线，可以传 `--base-ref`：
-
-```bash
-code2skill ci <repo_path> \
-  --output-dir .code2skill \
-  --mode auto \
-  --base-ref origin/main \
-  --head-ref HEAD \
-  --llm qwen \
-  --model qwen-plus
-```
-
-这在 PR / merge request 场景下更稳定。
-
-### 使用外部 diff 文件
-
-如果你的 CI 系统已经生成了 unified diff，可以直接传：
-
-```bash
-code2skill ci <repo_path> \
-  --output-dir .code2skill \
-  --mode incremental \
-  --diff-file changes.diff \
-  --llm qwen \
-  --model qwen-plus
-```
-
-## 推荐的 CI/CD 使用方式
-
-推荐把 `.code2skill/` 作为 CI cache 或 artifact 保存，而不是提交进仓库。
-
-原因：
-- `.code2skill/state/analysis-state.json` 是增量模式的核心状态
-- `.code2skill/skill-plan.json` 用于把受影响文件映射到已有 Skill
-- `.code2skill/skills/*.md` 用于增量修订已有 Skill 正文
-
-如果这些文件没有恢复，`ci --mode auto` 会自动退回全量。
+- 没有历史状态
+- 改动了核心配置文件，例如 `pyproject.toml`
+- 改动文件数超过 `--max-incremental-changed-files`
+- 当前目录不是 Git 仓库，且也没有提供 `--diff-file`
 
 ### GitHub Actions 示例
-
-下面这个例子适用于 PR 增量生成。
 
 ```yaml
 name: code2skill
@@ -276,14 +297,13 @@ jobs:
       - name: Run code2skill
         env:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          CODE2SKILL_LLM: qwen
+          CODE2SKILL_MODEL: qwen-plus
         run: |
-          code2skill ci . \
-            --output-dir .code2skill \
+          code2skill ci \
             --mode auto \
             --base-ref origin/${{ github.base_ref }} \
-            --head-ref HEAD \
-            --llm qwen \
-            --model qwen-plus
+            --head-ref HEAD
 
       - name: Upload outputs
         uses: actions/upload-artifact@v4
@@ -293,145 +313,123 @@ jobs:
 ```
 
 说明：
-- `fetch-depth: 0` 很重要，否则 `base_ref` 或旧 `head_commit` 可能不在本地历史中
-- `restore-keys` 让当前 commit 可以复用同分支上一次缓存
-- 第一次没有 cache 时，会自动走全量
 
-## 命令速查
+- `fetch-depth: 0` 很重要，否则基线提交可能不在本地历史里
+- `restore-keys` 能让同一分支上的后续提交复用历史状态
+- 第一次没有 cache 时，`ci --mode auto` 会自动走全量
 
-全量生成：
+## 生成产物与 Git 管理
+
+默认情况下，仓库根目录下的这些目录已经在 `.gitignore` 中忽略：
+
+- `.code2skill/`
+- `.code2skill-*/`
+- `.pypi-smoke/`
+
+建议：
+
+- 正式产物统一写到 `.code2skill/`
+- 本地试跑、真人验收、不同模型对比时，用 `.code2skill-qwen-live/`、`.code2skill-test/` 这类命名
+- 不要把测试生成的 `skills/` 目录提交到 Git
+- 如果要在 PR 中查看结果，优先用 artifact，而不是直接提交生成文件
+
+## 这个项目内部是怎么完成的
+
+如果你想理解 `code2skill` 自己是如何工作的，可以从这些模块开始：
+
+- `src/code2skill/scanner/`：文件发现、过滤、预算裁剪、优先级评分
+- `src/code2skill/extractors/python_extractor.py`：Python AST 骨架提取
+- `src/code2skill/import_graph.py`：仓库内 import graph
+- `src/code2skill/pattern_detector.py`：同角色文件模式检测
+- `src/code2skill/analyzers/skill_blueprint_builder.py`：把扫描结果组装成 `SkillBlueprint`
+- `src/code2skill/skill_planner.py`：生成 `skill-plan.json`
+- `src/code2skill/skill_generator.py`：生成和增量修订 `skills/*.md`
+- `src/code2skill/core.py`：统一编排 `scan / estimate / ci`
+
+推荐阅读顺序：
+
+1. `cli.py`
+2. `core.py`
+3. `scanner/` 与 `extractors/`
+4. `analyzers/`
+5. `skill_planner.py`
+6. `skill_generator.py`
+7. `adapt.py`
+
+## 发布检查清单
+
+开发与发布前推荐跑：
 
 ```bash
-code2skill scan . --output-dir .code2skill --llm qwen --model qwen-plus
+pip install -e .[dev]
+python -m pytest tests -q
+python -m build
+python -m twine check dist/code2skill-*.tar.gz dist/code2skill-*.whl
 ```
 
-只做结构扫描：
+上传到 PyPI：
 
 ```bash
-code2skill scan . --output-dir .code2skill --structure-only
+python -m twine upload dist/code2skill-*.tar.gz dist/code2skill-*.whl
 ```
 
-增量 CI：
+## 当前边界
 
-```bash
-code2skill ci . --output-dir .code2skill --mode auto --llm qwen --model qwen-plus
-```
-
-成本估算：
-
-```bash
-code2skill estimate . --output-dir .code2skill
-```
-
-适配到 Codex：
-
-```bash
-code2skill adapt --target codex --source-dir .code2skill/skills
-```
-
-适配全部目标：
-
-```bash
-code2skill adapt --target all --source-dir .code2skill/skills
-```
-
-## 输出目录
-
-```text
-.code2skill/
-  project-summary.md
-  skill-blueprint.json
-  skill-plan.json
-  report.json
-  references/
-    architecture.md
-    code-style.md
-    workflows.md
-    api-usage.md
-  skills/
-    index.md
-    *.md
-  state/
-    analysis-state.json
-```
-
-## 回退条件
-
-在 `ci --mode auto` 下，当前实现会在这些情况下自动退回全量：
-- 没有历史状态缓存
-- 改动了核心配置文件，例如 `pyproject.toml`
-- 改动文件数超过 `--max-incremental-changed-files`
-- 当前目录不是 Git 仓库，且你也没有传 `--diff-file`
-
-## 已知边界
-
-- 当前只面向 Python 仓库
-- 生成的 Skill 质量已经可用于实际消费，但仍然更适合“辅助编码与审查”，不应被当作绝对真理
-- `report.json` 中的部分影响摘要仍偏启发式，最终以 `skill-plan.json` 和实际生成的 `skills/*.md` 为准
+- 目前只面向 Python 仓库
+- 生成的 Skill 已适合辅助编码与审查，但不应被当作绝对事实
+- 增量更新依赖历史状态文件与可用 diff
+- `report.json` 中部分影响摘要仍带启发式成分，最终以 `skill-plan.json` 和生成出来的 `skills/*.md` 为准
 
 ## English Quick Reference
 
 ### What It Does
 
-`code2skill` converts a Python repository into:
+`code2skill` turns a Python repository into:
+
 - a structural blueprint
 - a skill plan
 - generated skill markdown files
-- cached state for incremental CI/CD updates
+- cached state for incremental CI/CD runs
 
-### First Run
+### Quick Start
 
-Use either:
-
-```bash
-code2skill scan . --output-dir .code2skill --llm qwen --model qwen-plus
-```
-
-or:
+From the target repo root:
 
 ```bash
-code2skill ci . --output-dir .code2skill --mode auto --llm qwen --model qwen-plus
+export QWEN_API_KEY=...
+export CODE2SKILL_LLM=qwen
+export CODE2SKILL_MODEL=qwen-plus
+code2skill scan
 ```
 
-If no previous state exists, `ci --mode auto` automatically falls back to a full build.
+### Main Commands
 
-### Incremental CI
+```bash
+code2skill scan
+code2skill scan --structure-only
+code2skill ci --mode auto --base-ref origin/main
+code2skill estimate
+code2skill adapt --target codex --source-dir .code2skill/skills
+```
 
-For incremental updates, restore:
+### Incremental CI Requirements
+
+Restore:
+
 - `.code2skill/state/analysis-state.json`
 - `.code2skill/skill-plan.json`
 - preferably `.code2skill/skills/`
 
-Then run:
+If they are missing, `ci --mode auto` falls back to a full run.
+
+### Release Validation
 
 ```bash
-code2skill ci . --output-dir .code2skill --mode auto --llm qwen --model qwen-plus
+pip install -e .[dev]
+python -m pytest tests -q
+python -m build
+python -m twine check dist/code2skill-*.tar.gz dist/code2skill-*.whl
 ```
-
-For pull requests, prefer:
-
-```bash
-code2skill ci . \
-  --output-dir .code2skill \
-  --mode auto \
-  --base-ref origin/main \
-  --head-ref HEAD \
-  --llm qwen \
-  --model qwen-plus
-```
-
-### When Auto Mode Falls Back to Full
-
-- no previous state
-- core config changes
-- too many changed files
-- not a Git repo and no `--diff-file`
-
-### Supported Backends
-
-- `openai` via `OPENAI_API_KEY`
-- `claude` via `ANTHROPIC_API_KEY`
-- `qwen` via `QWEN_API_KEY` or `DASHSCOPE_API_KEY`
 
 ## License
 

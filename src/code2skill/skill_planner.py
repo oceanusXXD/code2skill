@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections.abc import Callable
 from pathlib import Path
 
 from .json_utils import parse_json_object
@@ -9,11 +10,13 @@ from .llm_backend import LLMBackend
 from .models import SkillBlueprint, SkillPlan, SkillPlanEntry
 
 
-PLANNER_SYSTEM = (
-    "你是一个严谨的项目分析器。"
-    "你只能根据给定的结构摘要规划 Skill。"
-    "不要补造不存在的模块、框架、语言、流程或未来规划。"
-    "默认使用中文，不要使用 emoji。"
+PlannerPromptBuilder = Callable[[SkillBlueprint, int], str]
+
+DEFAULT_PLANNER_SYSTEM_PROMPT = (
+    "You are a strict repository analyst. "
+    "Plan skills only from the provided structural evidence. "
+    "Do not invent modules, frameworks, languages, workflows, or future plans "
+    "that are not supported by the input."
 )
 
 _EMOJI_RE = re.compile(
@@ -28,21 +31,29 @@ _EMOJI_RE = re.compile(
 
 
 class SkillPlanner:
-    def __init__(self, backend: LLMBackend, max_skills: int = 8) -> None:
+    def __init__(
+        self,
+        backend: LLMBackend,
+        max_skills: int = 8,
+        system_prompt: str | None = None,
+        prompt_builder: PlannerPromptBuilder | None = None,
+    ) -> None:
         self.backend = backend
         self.max_skills = max_skills
+        self.system_prompt = system_prompt or DEFAULT_PLANNER_SYSTEM_PROMPT
+        self.prompt_builder = prompt_builder or build_default_planner_prompt
 
     def plan(self, blueprint: SkillBlueprint, repo_path: Path) -> SkillPlan:
-        prompt = self._build_prompt(blueprint)
-        raw = self.backend.complete(prompt=prompt, system=PLANNER_SYSTEM)
+        prompt = self.prompt_builder(blueprint, self.max_skills)
+        raw = self.backend.complete(prompt=prompt, system=self.system_prompt)
         payload = parse_json_object(
             raw,
             error_context="Skill planner response was not valid JSON",
             backend=self.backend,
             expected_top_level_key="skills",
             repair_hint=(
-                "输出必须是 {\"skills\": [...]} 结构；"
-                "skills 中的每一项保留 name/title/scope/why/read_files/read_reason。"
+                "The output must be a JSON object with a top-level 'skills' key. "
+                "Each skill must include name, title, scope, why, read_files, and read_reason."
             ),
         )
 
@@ -58,7 +69,7 @@ class SkillPlanner:
             normalized.append(
                 SkillPlanEntry(
                     name=_to_kebab_case(str(item.get("name", "unnamed-skill"))),
-                    title=_sanitize_plain_text(str(item.get("title", ""))) or "未命名 Skill",
+                    title=_sanitize_plain_text(str(item.get("title", ""))) or "Untitled Skill",
                     scope=_sanitize_plain_text(str(item.get("scope", ""))),
                     why=_sanitize_plain_text(str(item.get("why", ""))),
                     read_files=read_files,
@@ -79,146 +90,148 @@ class SkillPlanner:
 
         return SkillPlan(skills=deduped)
 
-    def _build_prompt(self, blueprint: SkillBlueprint) -> str:
-        project_profile_text = "\n".join(
-            [
-                f"- 名称: {blueprint.project_profile.name}",
-                f"- 类型: {blueprint.project_profile.repo_type}",
-                f"- 语言: {', '.join(blueprint.project_profile.languages) or '[未检测到]'}",
-                f"- 框架信号: {', '.join(blueprint.project_profile.framework_signals) or '[未检测到]'}",
-                f"- 包结构: {blueprint.project_profile.package_topology}",
-                f"- 入口文件: {', '.join(blueprint.project_profile.entrypoints) or '[未检测到]'}",
-            ]
-        )
-        tech_stack_list = _render_tech_stack(blueprint.tech_stack)
-        domains_text = "\n".join(
-            [
-                f"- {domain.name}: {domain.summary} | evidence={', '.join(domain.evidence[:4]) or '[none]'}"
-                for domain in blueprint.domains[:8]
-            ]
-        ) or "[未检测到领域摘要]"
-        directory_summary_text = "\n".join(
-            [
-                (
-                    f"- {item.path}: {item.file_count} files; "
-                    f"roles={', '.join(item.dominant_roles) or '[unknown]'}; "
-                    f"samples={', '.join(item.sample_files) or '[none]'}"
-                )
-                for item in blueprint.directory_summary[:16]
-            ]
-        ) or "[未检测到目录摘要]"
-        key_configs_text = "\n".join(
-            [
-                (
-                    f"- {item.path} [{item.kind}] summary={item.summary}; "
-                    f"frameworks={', '.join(item.framework_signals[:4]) or '-'}; "
-                    f"entrypoints={', '.join(item.entrypoints[:4]) or '-'}"
-                )
-                for item in blueprint.key_configs[:10]
-            ]
-        ) or "[未检测到关键配置]"
-        core_modules_list = "\n".join(
-            [
-                (
-                    f"- {module.path} [{module.inferred_role}] "
-                    f"deps={', '.join(module.internal_dependencies[:4]) or '-'}; "
-                    f"symbols={', '.join((module.classes + module.functions)[:6]) or '-'}; "
-                    f"summary={module.short_doc_summary or '[none]'}"
-                )
-                for module in blueprint.core_modules[:16]
-            ]
-        ) or "[未检测到核心模块]"
-        abstract_rules_text = "\n".join(
-            [
-                (
-                    f"- {rule.name}: {rule.rule} "
-                    f"(confidence={rule.confidence:.0%}; source={rule.source}; "
-                    f"evidence={', '.join(rule.evidence[:3]) or '[none]'})"
-                )
-                for rule in blueprint.abstract_rules[:12]
-            ]
-        ) or "[未检测到稳定规则]"
-        workflow_text = "\n".join(
-            [
-                (
-                    f"- {workflow.name}: {workflow.summary} | "
-                    f"steps={'; '.join(workflow.steps[:4]) or '[none]'} | "
-                    f"evidence={', '.join(workflow.evidence[:4]) or '[none]'}"
-                )
-                for workflow in blueprint.concrete_workflows[:8]
-            ]
-        ) or "[未检测到稳定流程]"
-        import_graph_text = _render_import_graph(blueprint)
-        recommended_skills_text = "\n".join(
-            [
-                f"- {skill.name}: {skill.scope} | evidence={', '.join(skill.source_evidence[:4]) or '[none]'}"
-                for skill in blueprint.recommended_skills[:8]
-            ]
-        ) or "[无启发式推荐]"
 
-        return f"""
-你是一个项目分析器。根据以下项目结构摘要，决定应该生成哪些 Skill 文件。
+def build_default_planner_prompt(
+    blueprint: SkillBlueprint,
+    max_skills: int,
+) -> str:
+    project_profile_text = "\n".join(
+        [
+            f"- name: {blueprint.project_profile.name}",
+            f"- repo_type: {blueprint.project_profile.repo_type}",
+            f"- languages: {', '.join(blueprint.project_profile.languages) or '[not detected]'}",
+            f"- framework_signals: {', '.join(blueprint.project_profile.framework_signals) or '[not detected]'}",
+            f"- package_topology: {blueprint.project_profile.package_topology}",
+            f"- entrypoints: {', '.join(blueprint.project_profile.entrypoints) or '[not detected]'}",
+        ]
+    )
+    tech_stack_text = _render_tech_stack(blueprint.tech_stack)
+    domains_text = "\n".join(
+        [
+            f"- {domain.name}: {domain.summary} | evidence={', '.join(domain.evidence[:4]) or '[none]'}"
+            for domain in blueprint.domains[:8]
+        ]
+    ) or "[no domain summary detected]"
+    directory_summary_text = "\n".join(
+        [
+            (
+                f"- {item.path}: {item.file_count} files; "
+                f"roles={', '.join(item.dominant_roles) or '[unknown]'}; "
+                f"samples={', '.join(item.sample_files) or '[none]'}"
+            )
+            for item in blueprint.directory_summary[:16]
+        ]
+    ) or "[no directory summary detected]"
+    key_configs_text = "\n".join(
+        [
+            (
+                f"- {item.path} [{item.kind}] summary={item.summary}; "
+                f"frameworks={', '.join(item.framework_signals[:4]) or '-'}; "
+                f"entrypoints={', '.join(item.entrypoints[:4]) or '-'}"
+            )
+            for item in blueprint.key_configs[:10]
+        ]
+    ) or "[no key configuration detected]"
+    core_modules_text = "\n".join(
+        [
+            (
+                f"- {module.path} [{module.inferred_role}] "
+                f"deps={', '.join(module.internal_dependencies[:4]) or '-'}; "
+                f"symbols={', '.join((module.classes + module.functions)[:6]) or '-'}; "
+                f"summary={module.short_doc_summary or '[none]'}"
+            )
+            for module in blueprint.core_modules[:16]
+        ]
+    ) or "[no core modules detected]"
+    abstract_rules_text = "\n".join(
+        [
+            (
+                f"- {rule.name}: {rule.rule} "
+                f"(confidence={rule.confidence:.0%}; source={rule.source}; "
+                f"evidence={', '.join(rule.evidence[:3]) or '[none]'})"
+            )
+            for rule in blueprint.abstract_rules[:12]
+        ]
+    ) or "[no stable rules detected]"
+    workflow_text = "\n".join(
+        [
+            (
+                f"- {workflow.name}: {workflow.summary} | "
+                f"steps={'; '.join(workflow.steps[:4]) or '[none]'} | "
+                f"evidence={', '.join(workflow.evidence[:4]) or '[none]'}"
+            )
+            for workflow in blueprint.concrete_workflows[:8]
+        ]
+    ) or "[no stable workflow detected]"
+    import_graph_text = _render_import_graph(blueprint)
+    recommended_skills_text = "\n".join(
+        [
+            f"- {skill.name}: {skill.scope} | evidence={', '.join(skill.source_evidence[:4]) or '[none]'}"
+            for skill in blueprint.recommended_skills[:8]
+        ]
+    ) or "[no heuristic recommendation]"
 
-输出语言要求：
-1. 默认使用中文描述
-2. 保留英文代码标识符、路径、类名、函数名
-3. 不要使用 emoji
+    return f"""
+You are a project analyzer. Based on the repository summary below, decide which Skill files should be generated.
 
-项目信息：
+Project profile:
 {project_profile_text}
 
-技术栈：{tech_stack_list}
+Tech stack:
+{tech_stack_text}
 
-领域摘要：
+Domain summary:
 {domains_text}
 
-目录结构（含文件数和角色标签）：
+Directory structure with file counts and role labels:
 {directory_summary_text}
 
-关键配置：
+Key configuration:
 {key_configs_text}
 
-依赖关系摘要：
+Dependency summary:
 {import_graph_text}
 
-高价值文件：
-{core_modules_list}
+High-value files:
+{core_modules_text}
 
-已检测到的结构模式：
+Detected structural patterns:
 {abstract_rules_text}
 
-已检测到的固定流程：
+Detected stable workflows:
 {workflow_text}
 
-启发式推荐（低优先级参考，不要盲从）：
+Heuristic recommendations (low-priority reference, do not follow blindly):
 {recommended_skills_text}
 
-强约束：
-1. 只能基于输入中出现的证据规划 Skill
-2. 不要补造不存在的模块、框架、语言、分层或未来扩展方向
-3. 如果证据不足，宁可少生成 Skill，也不要为了凑数量强行拆分
-4. Skill 数量通常 2-6 个，最多 {self.max_skills} 个
-5. 每个 Skill 只聚焦一个明确领域，不要大而全
-6. 为每个 Skill 选出最多 10 个需要阅读的关键文件
-7. 优先按包边界、目录边界、依赖簇、稳定流程来拆 Skill，而不是按空泛概念命名
-8. 优先选择入口文件、核心模型、配置文件、典型服务或分析器
-9. 同类文件只选 1-2 个典型样例，不需要全读
-10. 如果多个候选 Skill 依赖高度重叠，应合并而不是拆散
-11. 除非文件明确支持一个独立子系统，否则不要生成类似“通用架构”“领域建模”这种过泛 Skill
-12. Skill 名称必须使用 kebab-case
-13. `scope`、`why`、`read_reason` 必须尽量体现证据来源，不写空泛措辞
-14. 测试相关 Skill 默认次要，只有当测试目录规模明显、存在共享 fixture/测试基础设施、或测试本身就是仓库的重要子系统时才生成
+Hard constraints:
+1. Plan skills only from evidence present in the input.
+2. Do not invent missing modules, frameworks, languages, architectural layers, or future directions.
+3. If evidence is weak, generate fewer skills instead of forcing coverage.
+4. The skill count is usually 2-6 and must not exceed {max_skills}.
+5. Each skill must focus on one clear area, not a vague broad topic.
+6. Choose at most 10 read_files per skill.
+7. Prefer package boundaries, directory boundaries, dependency clusters, and stable workflows over generic labels.
+8. Prefer entrypoints, core models, config files, and representative service or orchestration files.
+9. For similar files, choose only 1-2 representative examples instead of all of them.
+10. If multiple candidate skills depend on heavily overlapping files, merge them.
+11. Avoid generic skills such as "general architecture" unless the evidence clearly shows a standalone subsystem.
+12. Skill names must use kebab-case.
+13. scope, why, and read_reason must stay evidence-based and concrete.
+14. Testing-related skills should be secondary unless the test layer is itself a major subsystem.
+15. Write the output values in English.
+16. Do not use emoji.
 
-输出严格 JSON 格式：
+Return strict JSON:
 {{
   "skills": [
     {{
-      "name": "string, kebab-case 文件名",
-      "title": "string, 中文标题",
-      "scope": "string, 覆盖范围描述",
-      "why": "string, 为什么需要这个 skill",
-      "read_files": ["string, 文件路径"],
-      "read_reason": "string, 为什么选这些文件"
+      "name": "string, kebab-case filename",
+      "title": "string, concise title",
+      "scope": "string, scope description",
+      "why": "string, why this skill is needed",
+      "read_files": ["string, file path"],
+      "read_reason": "string, why these files were selected"
     }}
   ]
 }}
@@ -258,7 +271,7 @@ def _render_tech_stack(tech_stack: dict[str, object]) -> str:
         else:
             display = str(value)
         parts.append(f"{key}: {display}")
-    return "; ".join(parts) or "[未检测到]"
+    return "; ".join(parts) or "[not detected]"
 
 
 def _normalize_read_files(
@@ -303,7 +316,7 @@ def _sanitize_plain_text(value: str) -> str:
 def _render_import_graph(blueprint: SkillBlueprint) -> str:
     stats = blueprint.import_graph_stats
     if stats is None:
-        return "[未检测到内部依赖图]"
+        return "[no internal dependency graph detected]"
 
     cluster_lines = [
         f"  - {cluster.name}: {len(cluster.files)} files; examples={', '.join(cluster.files[:4])}"
@@ -313,7 +326,7 @@ def _render_import_graph(blueprint: SkillBlueprint) -> str:
         f"- hub_files: {', '.join(stats.hub_files[:8]) or '[none]'}",
         f"- entry_points: {', '.join(stats.entry_points[:8]) or '[none]'}",
         f"- total_internal_edges: {stats.total_internal_edges}",
-        f"- clusters:",
+        "- clusters:",
         *(cluster_lines or ["  - [none]"]),
     ]
     return "\n".join(lines)

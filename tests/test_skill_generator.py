@@ -41,18 +41,18 @@ def test_generate_incremental_uses_diff_and_updates_only_changed_sections(
     skill_dir = output_dir / "skills"
     skill_dir.mkdir(parents=True)
     (skill_dir / "backend-architecture.md").write_text(
-        "# 后端架构\n\n"
-        "## 概述\n"
-        "保持不变。\n\n"
-        "## 核心规则\n"
-        "- 旧规则\n\n"
-        "## 常见流程\n"
-        "- 旧流程\n",
+        "# Backend Architecture\n\n"
+        "## Overview\n"
+        "Keep this section unchanged.\n\n"
+        "## Core Rules\n"
+        "- Old rule\n\n"
+        "## Common Flows\n"
+        "- Old flow\n",
         encoding="utf-8",
     )
 
     backend = FakeBackend(
-        '{"updated_sections":[{"heading":"核心规则","content":"## 核心规则\\n- 新规则：服务层返回稳定字符串。"}]}'
+        '{"updated_sections":[{"heading":"Core Rules","content":"## Core Rules\\n- Services return stable string payloads. Source: services/user_service.py:ping"}]}'
     )
     generator = SkillGenerator(
         backend=backend,
@@ -64,11 +64,11 @@ def test_generate_incremental_uses_diff_and_updates_only_changed_sections(
         skills=[
             SkillPlanEntry(
                 name="backend-architecture",
-                title="后端架构",
-                scope="服务层",
-                why="服务实现决定架构规则。",
+                title="Backend Architecture",
+                scope="Service layer",
+                why="Service implementations define architecture rules.",
                 read_files=["app.py"],
-                read_reason="入口文件。",
+                read_reason="Entrypoint file.",
             )
         ]
     )
@@ -92,10 +92,10 @@ def test_generate_incremental_uses_diff_and_updates_only_changed_sections(
         recommended_skills=[
             SkillRecommendation(
                 name="backend-architecture",
-                purpose="服务层规则",
-                scope="服务层",
+                purpose="Service rules",
+                scope="Service layer",
                 source_evidence=["services/user_service.py"],
-                why_split="服务层是主要变化点。",
+                why_split="The service layer is a major change point.",
                 likely_inputs=[],
                 likely_outputs=[],
             )
@@ -129,7 +129,7 @@ def test_generate_incremental_uses_diff_and_updates_only_changed_sections(
                     inferred_role="service",
                     language="python",
                     functions=["ping"],
-                    short_doc_summary="旧的 ping 实现。",
+                    short_doc_summary="Old ping implementation.",
                 ),
             )
         },
@@ -164,6 +164,9 @@ def test_generate_incremental_uses_diff_and_updates_only_changed_sections(
 
     assert "services/user_service.py" in prompt
     assert "@@ -1 +1,2 @@" in prompt
-    assert "## 概述\n保持不变。" in updated
-    assert "## 核心规则\n<!-- UPDATED -->\n- 新规则：服务层返回稳定字符串。" in updated
-    assert "- 旧规则" not in updated
+    assert "## Overview\nKeep this section unchanged." in updated
+    assert (
+        "## Core Rules\n<!-- UPDATED -->\n- Services return stable string payloads. Source: services/user_service.py:ping"
+        in updated
+    )
+    assert "- Old rule" not in updated
