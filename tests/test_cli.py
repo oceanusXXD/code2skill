@@ -19,7 +19,7 @@ def test_build_config_uses_environment_defaults(
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("CODE2SKILL_OUTPUT_DIR", ".code2skill-release")
     monkeypatch.setenv("CODE2SKILL_LLM", "qwen")
-    monkeypatch.setenv("CODE2SKILL_MODEL", "qwen-plus")
+    monkeypatch.setenv("CODE2SKILL_MODEL", "qwen-plus-latest")
     monkeypatch.setenv("CODE2SKILL_MAX_SKILLS", "5")
     monkeypatch.setenv("CODE2SKILL_BASE_REF", "origin/main")
     monkeypatch.setenv("CODE2SKILL_HEAD_REF", "HEAD~1")
@@ -31,7 +31,7 @@ def test_build_config_uses_environment_defaults(
     assert config.repo_path == tmp_path.resolve()
     assert config.output_dir == tmp_path / ".code2skill-release"
     assert config.run.llm_provider == "qwen"
-    assert config.run.llm_model == "qwen-plus"
+    assert config.run.llm_model == "qwen-plus-latest"
     assert config.run.max_skills == 5
     assert config.run.base_ref == "origin/main"
     assert config.run.head_ref == "HEAD~1"

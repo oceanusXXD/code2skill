@@ -316,6 +316,7 @@ class ImpactSummary:
     changed_files: list[str]
     affected_files: list[str]
     affected_skills: list[str]
+    generated_skills: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -360,5 +361,6 @@ class ScanExecution:
     changed_files: list[str] = field(default_factory=list)
     affected_files: list[str] = field(default_factory=list)
     affected_skills: list[str] = field(default_factory=list)
+    generated_skills: list[str] = field(default_factory=list)
     report_path: Path | None = None
     report: ExecutionReport | None = None

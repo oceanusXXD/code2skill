@@ -68,7 +68,11 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
     state_store = StateStore(output_dir)
     previous_state = state_store.load()
     changed_diffs = _detect_changed_diffs(config, previous_state, git_client)
-    changed_files = _changed_paths_from_diffs(changed_diffs)
+    changed_files = _changed_paths_from_diffs(
+        changed_diffs=changed_diffs,
+        repo_path=repo_path,
+        output_dir=output_dir,
+    )
     effective_mode, notes = _choose_effective_mode(
         config=config,
         previous_state=previous_state,
@@ -155,8 +159,14 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
     patch_cost = cost_estimator.estimate_incremental_patch(rewrite_cost)
 
     skill_artifacts: dict[str, str] = {}
+    generated_skill_names: list[str] = []
+    planned_skill_names: list[str] = []
     if _should_run_skill_pipeline(config):
-        skill_artifacts = _build_skill_artifacts(
+        (
+            skill_artifacts,
+            generated_skill_names,
+            planned_skill_names,
+        ) = _build_skill_artifacts(
             config=config,
             effective_mode=effective_mode,
             repo_path=repo_path,
@@ -177,6 +187,13 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
             output_dir=output_dir,
             rendered_artifacts=rendered_artifacts,
         )
+        if planned_skill_names:
+            updated_files.extend(
+                _prune_stale_skill_files(
+                    output_dir=output_dir,
+                    planned_skill_names=planned_skill_names,
+                )
+            )
 
     report = _build_report(
         config=config,
@@ -188,6 +205,7 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
         changed_files=changed_files,
         affected_files=affected_files,
         affected_skills=affected_skills,
+        generated_skills=generated_skill_names,
         written_files=written_files,
         updated_files=updated_files,
         head_commit=git_client.current_head() if git_client.is_repository() else None,
@@ -232,6 +250,7 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
         changed_files=changed_files,
         affected_files=affected_files,
         affected_skills=affected_skills,
+        generated_skills=generated_skill_names,
         report_path=report_path,
         report=report,
     )
@@ -615,8 +634,50 @@ def _detect_changed_diffs(
     return []
 
 
-def _changed_paths_from_diffs(changed_diffs: list[FileDiffPatch]) -> list[str]:
-    return sorted({item.path for item in changed_diffs})
+def _changed_paths_from_diffs(
+    changed_diffs: list[FileDiffPatch],
+    repo_path: Path,
+    output_dir: Path,
+) -> list[str]:
+    return sorted(
+        {
+            item.path
+            for item in changed_diffs
+            if item.path
+            and not _is_generated_artifact_path(
+                path=item.path,
+                repo_path=repo_path,
+                output_dir=output_dir,
+            )
+        }
+    )
+
+
+def _is_generated_artifact_path(
+    path: str,
+    repo_path: Path,
+    output_dir: Path,
+) -> bool:
+    normalized = Path(path).as_posix()
+    first_part = normalized.split("/", 1)[0]
+    if first_part.startswith(".code2skill"):
+        return True
+    if normalized in {"AGENTS.md", "CLAUDE.md", ".windsurfrules"}:
+        return True
+    if normalized == ".github/copilot-instructions.md":
+        return True
+    if normalized == ".cursor/rules" or normalized.startswith(".cursor/rules/"):
+        return True
+
+    try:
+        relative_output_dir = output_dir.relative_to(repo_path).as_posix()
+    except ValueError:
+        return False
+
+    return (
+        normalized == relative_output_dir
+        or normalized.startswith(f"{relative_output_dir}/")
+    )
 
 
 def _choose_effective_mode(
@@ -764,7 +825,7 @@ def _build_skill_artifacts(
     changed_diffs: list[FileDiffPatch],
     affected_files: list[str],
     affected_skill_names: list[str],
-) -> dict[str, str]:
+) -> tuple[dict[str, str], list[str], list[str]]:
     from .skill_generator import SkillGenerator, match_planned_skills
     from .skill_planner import SkillPlanner, load_skill_plan, render_skill_plan
 
@@ -795,7 +856,8 @@ def _build_skill_artifacts(
             "skill-plan.json": render_skill_plan(plan),
         }
         artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
-        return artifacts
+        planned_names = [skill.name for skill in plan.skills]
+        return artifacts, planned_names, planned_names
 
     try:
         plan = load_skill_plan(plan_path)
@@ -805,10 +867,12 @@ def _build_skill_artifacts(
             "skill-plan.json": render_skill_plan(plan),
         }
         artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
-        return artifacts
+        planned_names = [skill.name for skill in plan.skills]
+        return artifacts, planned_names, planned_names
 
     artifacts: dict[str, str] = {}
     plan_skill_names = {skill.name for skill in plan.skills}
+    planned_names = [skill.name for skill in plan.skills]
     present_skills = [
         name for name in affected_skill_names
         if name in plan_skill_names
@@ -823,15 +887,13 @@ def _build_skill_artifacts(
         plan = planner.plan(blueprint=blueprint, repo_path=repo_path)
         artifacts["skill-plan.json"] = render_skill_plan(plan)
         plan_skill_names = {skill.name for skill in plan.skills}
-        affected_skill_names = [
-            name for name in affected_skill_names
-            if name in plan_skill_names
-        ]
-        if not affected_skill_names:
-            affected_skill_names = match_planned_skills(affected_files, plan)
+        planned_names = [skill.name for skill in plan.skills]
+        affected_skill_names = match_planned_skills(affected_files, plan)
+        artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
+        return artifacts, planned_names, planned_names
 
     if not affected_skill_names:
-        return artifacts
+        return artifacts, [], planned_names
 
     artifacts.update(
         generator.generate_incremental(
@@ -843,7 +905,7 @@ def _build_skill_artifacts(
             previous_state=previous_state,
         )
     )
-    return artifacts
+    return artifacts, affected_skill_names, planned_names
 
 
 def build_llm_backend(provider: str, model: str | None = None):
@@ -871,6 +933,25 @@ def _write_outputs(
     return written_files, updated_files
 
 
+def _prune_stale_skill_files(
+    output_dir: Path,
+    planned_skill_names: list[str],
+) -> list[Path]:
+    skills_dir = output_dir / "skills"
+    if not skills_dir.exists():
+        return []
+
+    keep = {f"{name}.md" for name in planned_skill_names}
+    keep.add("index.md")
+    removed: list[Path] = []
+    for path in skills_dir.glob("*.md"):
+        if path.name in keep:
+            continue
+        path.unlink(missing_ok=True)
+        removed.append(path)
+    return removed
+
+
 def _build_report(
     config: ScanConfig,
     effective_mode: str,
@@ -881,6 +962,7 @@ def _build_report(
     changed_files: list[str],
     affected_files: list[str],
     affected_skills: list[str],
+    generated_skills: list[str],
     written_files: list[Path],
     updated_files: list[Path],
     head_commit: str | None,
@@ -914,6 +996,7 @@ def _build_report(
             changed_files=changed_files,
             affected_files=affected_files,
             affected_skills=affected_skills,
+            generated_skills=generated_skills,
         ),
         first_generation_cost=first_generation_cost,
         incremental_rewrite_cost=rewrite_cost,

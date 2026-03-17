@@ -19,6 +19,8 @@ from code2skill.models import (
     WorkflowSummary,
 )
 from code2skill.skill_generator import SkillGenerator
+from code2skill.core import _changed_paths_from_diffs, _prune_stale_skill_files
+from code2skill.models import FileDiffPatch
 from code2skill.skill_planner import SkillPlanner
 
 
@@ -207,6 +209,7 @@ def test_skill_generator_prompt_and_output_are_evidence_driven(
 
         ## Core Rules
         - Every file must start with `from __future__ import annotations`. Source: src/code2skill/cli.py
+        - Service files must import `__future__.annotations`. Source: src/code2skill/cli.py
         - Enter the scan flow through `main()`. Source: src/code2skill/cli.py:main
 
         ## Typical Patterns
@@ -249,10 +252,115 @@ def test_skill_generator_prompt_and_output_are_evidence_driven(
     assert "✨" not in content
     assert "# Scanner Flow Guide" in content
     assert "from __future__ import annotations" not in content
+    assert "__future__.annotations" not in content
     prompt = str(backend.calls[0]["prompt"])
     assert "Do not use emoji, decorative symbols, or extra headings." in prompt
     assert "Output exactly the 5 sections listed below and nothing else." in prompt
     assert 'Every bullet under "Core Rules" must include a source path in the same bullet.' in prompt
+
+
+def test_skill_generator_replaces_ungrounded_snippets_with_exact_context(
+    tmp_path: Path,
+) -> None:
+    _write(
+        tmp_path / "src/code2skill/cli.py",
+        "def main() -> None:\n    run_scan()\n",
+    )
+    output_dir = tmp_path / ".code2skill"
+    backend = MockBackend(
+        """
+        # Scanner Flow Guide
+        ## Overview
+        This area defines the command entrypoint.
+
+        ## Core Rules
+        - Enter the scan flow through `main()`. Source: src/code2skill/cli.py:main
+
+        ## Typical Patterns
+        Source: src/code2skill/cli.py
+        ```python
+        def made_up() -> None:
+            pass
+        ```
+
+        ## Avoid
+        - [Needs confirmation] The current context is not sufficient to derive a stable anti-pattern.
+
+        ## Common Flows
+        - [Needs confirmation] The current context does not show a stable flow.
+        """
+    )
+    generator = SkillGenerator(
+        backend=backend,
+        repo_path=tmp_path,
+        output_dir=output_dir,
+        max_inline_chars=4096,
+    )
+
+    artifacts = generator.generate_all(
+        blueprint=_sample_blueprint(),
+        plan=SkillPlan(
+            skills=[
+                SkillPlanEntry(
+                    name="scanner-flow",
+                    title="Scanner Flow Guide",
+                    scope="Command entrypoint and scan orchestration",
+                    why="This is the user-visible entry into the scan flow",
+                    read_files=["src/code2skill/cli.py"],
+                    read_reason="The entrypoint defines how the scan is invoked",
+                )
+            ]
+        ),
+    )
+
+    content = artifacts["skills/scanner-flow.md"]
+    assert "def made_up() -> None:" not in content
+    assert "def main() -> None:" in content
+    assert "run_scan()" in content
+
+
+def test_changed_paths_filter_out_generated_artifacts(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+    output_dir = repo_path / ".code2skill-full"
+
+    changed = _changed_paths_from_diffs(
+        changed_diffs=[
+            FileDiffPatch(
+                path=".code2skill-full/report.json",
+                change_type="modify",
+                patch="",
+            ),
+            FileDiffPatch(
+                path=".code2skill-structure/report.json",
+                change_type="modify",
+                patch="",
+            ),
+            FileDiffPatch(path="AGENTS.md", change_type="modify", patch=""),
+            FileDiffPatch(path="src/app.py", change_type="modify", patch=""),
+        ],
+        repo_path=repo_path,
+        output_dir=output_dir,
+    )
+
+    assert changed == ["src/app.py"]
+
+
+def test_prune_stale_skill_files_removes_orphaned_markdown(tmp_path: Path) -> None:
+    skills_dir = tmp_path / "skills"
+    skills_dir.mkdir()
+    (skills_dir / "index.md").write_text("# Index\n", encoding="utf-8")
+    (skills_dir / "keep-me.md").write_text("# Keep\n", encoding="utf-8")
+    (skills_dir / "remove-me.md").write_text("# Remove\n", encoding="utf-8")
+
+    removed = _prune_stale_skill_files(
+        output_dir=tmp_path,
+        planned_skill_names=["keep-me"],
+    )
+
+    assert removed == [skills_dir / "remove-me.md"]
+    assert (skills_dir / "keep-me.md").exists()
+    assert not (skills_dir / "remove-me.md").exists()
 
 
 def _sample_blueprint() -> SkillBlueprint:

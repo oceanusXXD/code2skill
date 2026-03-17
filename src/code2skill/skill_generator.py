@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import ast
 import hashlib
 import json
 import re
+import textwrap
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
@@ -69,6 +71,7 @@ _EMOJI_RE = re.compile(
 )
 _LOW_VALUE_RULE_PATTERNS = [
     re.compile(r"from __future__ import annotations", flags=re.IGNORECASE),
+    re.compile(r"__future__\s*\.?\s*annotations", flags=re.IGNORECASE),
     re.compile(r"\bimport(?:s|ing)?\s+path\b", flags=re.IGNORECASE),
     re.compile(r"\bpath\b.*\bimport", flags=re.IGNORECASE),
     re.compile(r"\bimport\s+order\b", flags=re.IGNORECASE),
@@ -228,7 +231,10 @@ class SkillGenerator:
             relevant_rules,
         )
         raw = self.backend.complete(prompt=prompt, system=self.system_prompt)
-        return _sanitize_markdown(raw)
+        return _finalize_generated_skill(
+            raw_markdown=raw,
+            context_files=context_files,
+        )
 
     def _update_skill(
         self,
@@ -361,6 +367,8 @@ Hard requirements:
 10. Prefer behavior constraints, call order, module boundaries, data contracts, and extension points over style trivia.
 11. Do not turn `from __future__ import annotations`, routine typing, import ordering, empty `__init__.py`, or a shared `Path` import into a rule unless it materially affects behavior.
 12. Keep "Core Rules" to 4-6 high-value bullets.
+13. Every code block must be copied verbatim from the provided file context. Do not simplify, abbreviate, or synthesize snippets.
+14. If you cannot quote an exact code snippet from the provided context, write one bullet under "Typical Patterns": "[Needs confirmation] No exact grounded snippet is available in the provided context."
 
 Return Markdown with exactly this structure:
 
@@ -736,10 +744,133 @@ def _tokenize(text: str) -> set[str]:
 
 
 def _sanitize_markdown(text: str) -> str:
-    cleaned = text.replace("\r\n", "\n").strip()
+    cleaned = textwrap.dedent(text).replace("\r\n", "\n").strip()
     cleaned = _EMOJI_RE.sub("", cleaned)
     cleaned = re.sub(r"[ \t]+\n", "\n", cleaned)
     return _remove_low_value_core_rules(cleaned)
+
+
+def _finalize_generated_skill(
+    raw_markdown: str,
+    context_files: list[dict[str, str]],
+) -> str:
+    cleaned = _sanitize_markdown(raw_markdown)
+    if _has_only_grounded_code_blocks(cleaned, context_files):
+        return cleaned
+    return _replace_typical_patterns_section(
+        markdown=cleaned,
+        replacement_body=_build_grounded_typical_patterns(context_files),
+    )
+
+
+def _has_only_grounded_code_blocks(
+    markdown: str,
+    context_files: list[dict[str, str]],
+) -> bool:
+    blocks = re.findall(r"```[^\n]*\n(.*?)```", markdown, flags=re.DOTALL)
+    if not blocks:
+        return True
+    normalized_context = [
+        context["content"].replace("\r\n", "\n")
+        for context in context_files
+    ]
+    for block in blocks:
+        snippet = block.strip()
+        if not snippet:
+            continue
+        if any(snippet in content for content in normalized_context):
+            continue
+        return False
+    return True
+
+
+def _replace_typical_patterns_section(
+    markdown: str,
+    replacement_body: str,
+) -> str:
+    document = _parse_skill_document(markdown)
+    sections: list[SkillDocumentSection] = []
+    for section in document.sections:
+        if section.heading == "Typical Patterns":
+            sections.append(
+                SkillDocumentSection(
+                    heading=section.heading,
+                    content=f"## Typical Patterns\n{replacement_body}".strip(),
+                )
+            )
+            continue
+        sections.append(section)
+
+    parts = [document.title]
+    if document.preamble:
+        parts.append(document.preamble)
+    parts.extend(section.content for section in sections if section.content)
+    return _sanitize_markdown(
+        "\n\n".join(part.strip() for part in parts if part.strip())
+    )
+
+
+def _build_grounded_typical_patterns(
+    context_files: list[dict[str, str]],
+) -> str:
+    snippets: list[str] = []
+    for context in context_files:
+        language = infer_language(Path(context["path"])) or ""
+        for snippet in _extract_grounded_snippets(context["content"], language):
+            fence = language if language else ""
+            snippets.append(
+                "\n".join(
+                    [
+                        f"Source: {context['path']}",
+                        f"```{fence}",
+                        snippet,
+                        "```",
+                    ]
+                )
+            )
+            if len(snippets) >= 3:
+                return "\n\n".join(snippets)
+
+    if snippets:
+        return "\n\n".join(snippets)
+    return (
+        "- [Needs confirmation] No exact grounded snippet is available in the "
+        "provided context."
+    )
+
+
+def _extract_grounded_snippets(content: str, language: str) -> list[str]:
+    normalized = content.replace("\r\n", "\n").strip("\n")
+    if not normalized:
+        return []
+    if language == "python":
+        try:
+            tree = ast.parse(normalized)
+        except SyntaxError:
+            return _fallback_grounded_snippets(normalized)
+        lines = normalized.splitlines()
+        snippets: list[str] = []
+        for node in tree.body:
+            if not isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)):
+                continue
+            start = max(node.lineno - 1, 0)
+            end = getattr(node, "end_lineno", node.lineno)
+            end = min(end, start + 12)
+            snippet = "\n".join(lines[start:end]).strip()
+            if snippet:
+                snippets.append(snippet)
+            if len(snippets) >= 2:
+                break
+        if snippets:
+            return snippets
+    return _fallback_grounded_snippets(normalized)
+
+
+def _fallback_grounded_snippets(content: str) -> list[str]:
+    lines = [line for line in content.splitlines() if line.strip()]
+    if not lines:
+        return []
+    return ["\n".join(lines[: min(len(lines), 8)])]
 
 
 def _remove_low_value_core_rules(text: str) -> str:
