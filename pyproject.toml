@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code2skill"
-version = "0.1.0"
-description = "Generate AI-ready skills, repository blueprints, and rule files from real Python repositories."
+version = "0.1.1"
+description = "Generate repository-aware Skills, blueprints, and AI rule files from real Python codebases."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ authors = [
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
 ]
-keywords = ["ai", "python", "repository-analysis", "skills", "agents", "codex", "cursor", "claude-code", "copilot", "windsurf"]
+keywords = ["python", "ai", "skills", "repository-analysis", "ai-agents", "developer-tools"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -27,9 +27,9 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
-  "Topic :: Software Development :: Build Tools",
-  "Topic :: Utilities",
   "Topic :: Software Development :: Libraries :: Python Modules",
+  "Topic :: Software Development :: Documentation",
+  "Topic :: Utilities",
 ]
 
 [project.urls]
@@ -37,6 +37,7 @@ Homepage = "https://github.com/oceanusXXD/code2skill"
 Repository = "https://github.com/oceanusXXD/code2skill"
 Documentation = "https://github.com/oceanusXXD/code2skill#readme"
 Issues = "https://github.com/oceanusXXD/code2skill/issues"
+Changelog = "https://github.com/oceanusXXD/code2skill/blob/main/docs/releases/v0.1.1.md"
 
 [project.optional-dependencies]
 dev = [
