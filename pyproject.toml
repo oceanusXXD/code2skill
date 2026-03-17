@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code2skill"
-version = "0.1.2"
-description = "Turn a code repository into structured AI skill context."
+version = "0.1.3"
+description = "Generate grounded AI coding assistant skills and repository blueprints from real Python codebases."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ authors = [
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
 ]
-keywords = ["ai", "cli", "developer-tools", "skills"]
+keywords = ["ai", "python", "repository-analysis", "skills", "codex", "cursor", "claude-code", "copilot"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -28,6 +28,7 @@ classifiers = [
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
   "Topic :: Software Development :: Build Tools",
+  "Topic :: Utilities",
   "Topic :: Software Development :: Libraries :: Python Modules",
 ]
 

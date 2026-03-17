@@ -1,11 +1,52 @@
 # code2skill
 
+[![PyPI version](https://img.shields.io/pypi/v/code2skill)](https://pypi.org/project/code2skill/)
+[![Python versions](https://img.shields.io/pypi/pyversions/code2skill)](https://pypi.org/project/code2skill/)
+[![License](https://img.shields.io/pypi/l/code2skill)](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE)
+
 中文优先，后附英文快速说明。
 Chinese first, with an English quick reference at the end.
 
-`code2skill` 是一个面向 Python 仓库的 CLI。它会把真实代码仓库编译成一组结构化项目知识和 Skill 文档，供 Cursor、Claude Code、Codex、Copilot、Windsurf 等 AI 编程助手消费。
+`code2skill` 是一个面向 Python 仓库的 CLI。它会把真实代码仓库转换成结构化项目知识、AI 可消费的 Skill 文档，以及可以直接适配到 Cursor、Claude Code、Codex、Copilot、Windsurf 的规则文件。
 
-它的目标不是“总结仓库”，而是生成能直接用于后续编码、审查和增量更新的高密度上下文。
+它的目标不是“总结仓库”，而是生成能直接用于后续编码、审查、补丁编写和增量更新的高密度上下文。
+
+核心定位：
+
+- 输入：一个真实 Python 仓库
+- 中间产物：`project-summary.md`、`skill-blueprint.json`、`skill-plan.json`
+- 最终产物：`skills/*.md`、`AGENTS.md`、`CLAUDE.md`、`copilot-instructions.md` 等 AI 规则文件
+- 目标工具：Cursor、Claude Code、Codex、GitHub Copilot、Windsurf
+
+如果你在找下面这些能力，这个项目就是为此设计的：
+
+- Python repository analysis for AI coding assistants
+- Generate Cursor rules / Codex `AGENTS.md` / Claude Code docs from source code
+- Turn a backend repository into reusable AI skills instead of one-off prompts
+- Keep AI repo knowledge incrementally updated in CI
+
+## 为什么它更适合 AI 消费
+
+- 先做结构扫描，再做 Skill 规划，最后生成可复用文档，而不是一次性长 prompt
+- Phase 1 不依赖 LLM，先把目录、import、角色、模式、规则和流程提纯
+- 输出是稳定文件，不是聊天记录，后续可以直接复用、提交和增量更新
+- 支持把生成结果落到不同 IDE/Agent 约定位置，而不是手动复制粘贴
+
+## 你会得到什么
+
+- `project-summary.md`：面向人快速浏览的项目概览
+- `skill-blueprint.json`：Phase 1 的结构化仓库蓝图
+- `skill-plan.json`：LLM 规划出的 Skill 列表和阅读文件
+- `skills/index.md`：Skill 索引
+- `skills/*.md`：真正给 AI 编程助手消费的领域规则文档
+- `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*`：适配后的 IDE 产物
+
+## 典型使用场景
+
+- 给一个已有 Python 后端仓库补齐 Cursor / Codex / Claude Code 规则
+- 在 CI 里根据 diff 自动重建受影响的 Skill
+- 给团队沉淀一套来自真实代码而不是口头约定的开发规范
+- 给 AI 编程工具提供 grounded repository context，减少幻觉和误判
 
 ## 适用范围
 
