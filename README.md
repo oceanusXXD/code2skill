@@ -367,12 +367,6 @@ python -m build
 python -m twine check dist/code2skill-*.tar.gz dist/code2skill-*.whl
 ```
 
-上传到 PyPI：
-
-```bash
-python -m twine upload dist/code2skill-*.tar.gz dist/code2skill-*.whl
-```
-
 ## 当前边界
 
 - 目前只面向 Python 仓库
