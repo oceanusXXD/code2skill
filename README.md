@@ -4,220 +4,146 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/code2skill)](https://pypi.org/project/code2skill/)
 [![License](https://img.shields.io/pypi/l/code2skill)](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE)
 
-中文优先，后附英文快速说明。
-Chinese first, with an English quick reference at the end.
+English README. For Chinese documentation, see [README.zh-CN.md](./README.zh-CN.md).
 
-`code2skill` 是一个面向 Python 仓库的 CLI。它会把真实代码仓库转换成结构化项目知识、AI 可消费的 Skill 文档，以及可以直接适配到 Cursor、Claude Code、Codex、Copilot、Windsurf 的规则文件。
+`code2skill` turns a real Python repository into structured project knowledge, reusable AI skill documents, and IDE-ready rule files for tools such as Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
 
-它的目标不是“总结仓库”，而是生成能直接用于后续编码、审查、补丁编写和增量更新的高密度上下文。
+Instead of relying on one long prompt, it builds durable repository artifacts that can be committed, reviewed, reused, and incrementally regenerated in CI.
 
-核心定位：
+## What It Generates
 
-- 输入：一个真实 Python 仓库
-- 中间产物：`project-summary.md`、`skill-blueprint.json`、`skill-plan.json`
-- 最终产物：`skills/*.md`、`AGENTS.md`、`CLAUDE.md`、`copilot-instructions.md` 等 AI 规则文件
-- 目标工具：Cursor、Claude Code、Codex、GitHub Copilot、Windsurf
+From one Python repository, `code2skill` can generate:
 
-如果你在找下面这些能力，这个项目就是为此设计的：
+- `project-summary.md` for a human-readable overview
+- `skill-blueprint.json` for the structured Phase 1 repository blueprint
+- `skill-plan.json` for LLM-generated skill planning
+- `skills/index.md` and `skills/*.md` for grounded AI-consumable skill documents
+- `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, and other target-specific outputs via `adapt`
 
-- Python repository analysis for AI coding assistants
-- Generate Cursor rules / Codex `AGENTS.md` / Claude Code docs from source code
-- Turn a backend repository into reusable AI skills instead of one-off prompts
-- Keep AI repo knowledge incrementally updated in CI
+## Why It Exists
 
-## 为什么它更适合 AI 消费
+Most AI coding workflows still depend on ad-hoc prompts, chat history, or manually curated notes. That does not scale well for real repositories.
 
-- 先做结构扫描，再做 Skill 规划，最后生成可复用文档，而不是一次性长 prompt
-- Phase 1 不依赖 LLM，先把目录、import、角色、模式、规则和流程提纯
-- 输出是稳定文件，不是聊天记录，后续可以直接复用、提交和增量更新
-- 支持把生成结果落到不同 IDE/Agent 约定位置，而不是手动复制粘贴
+`code2skill` is designed to:
 
-## 你会得到什么
+- extract repository structure before asking an LLM to synthesize rules
+- preserve repository knowledge as files rather than transient conversations
+- make AI context reproducible in local workflows and CI
+- keep generated guidance grounded in code, imports, patterns, and selected evidence
 
-- `project-summary.md`：面向人快速浏览的项目概览
-- `skill-blueprint.json`：Phase 1 的结构化仓库蓝图
-- `skill-plan.json`：LLM 规划出的 Skill 列表和阅读文件
-- `skills/index.md`：Skill 索引
-- `skills/*.md`：真正给 AI 编程助手消费的领域规则文档
-- `AGENTS.md` / `CLAUDE.md` / `.cursor/rules/*`：适配后的 IDE 产物
+## Current Scope
 
-## 典型使用场景
+- Python repositories only
+- Python source analysis uses `ast`
+- Phase 1 does not require an LLM
+- Supports `scan`, `estimate`, `ci`, and `adapt`
+- Supports `openai`, `claude`, and `qwen`
+- Default generated prompts and skill documents are in English
 
-- 给一个已有 Python 后端仓库补齐 Cursor / Codex / Claude Code 规则
-- 在 CI 里根据 diff 自动重建受影响的 Skill
-- 给团队沉淀一套来自真实代码而不是口头约定的开发规范
-- 给 AI 编程工具提供 grounded repository context，减少幻觉和误判
+## Installation
 
-## 适用范围
-
-- 当前只面向 Python 仓库
-- Phase 1 不调用 LLM
-- Python 源码使用 `ast` 做结构提取
-- 支持 `scan`、`estimate`、`ci`、`adapt`
-- 支持 `openai`、`claude`、`qwen`
-- 默认使用英文 prompt 和英文 Skill 输出，不使用 emoji，证据不足处标记 `[Needs confirmation]`
-
-## 核心特性
-
-- 结构扫描：目录发现、过滤、预算裁剪、Python 骨架提取
-- 结构分析：import graph、角色修正、模式检测、抽象规则提炼
-- Skill 规划：用 1 次 LLM 调用决定生成哪些 Skill、每个 Skill 读哪些文件
-- Skill 生成：按 Skill 聚焦上下文逐个生成高质量 Markdown
-- 增量更新：在 CI 中根据 Git diff 只重写受影响的 Skill
-- 目标适配：把 `skills/*.md` 复制或合并到 Cursor / Codex / Claude 等约定位置
-
-## 30 秒上手
-
-先设置模型环境变量：
-
-```bash
-export QWEN_API_KEY=...
-export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus-latest
-```
-
-PowerShell:
-
-```powershell
-$env:QWEN_API_KEY="..."
-$env:CODE2SKILL_LLM="qwen"
-$env:CODE2SKILL_MODEL="qwen-plus-latest"
-```
-
-进入要分析的仓库目录后直接运行：
-
-```bash
-code2skill scan
-```
-
-现在 `repo_path` 默认就是当前目录，所以在仓库根目录里不需要再写 `.`。
-
-如果只想先做结构扫描：
-
-```bash
-code2skill scan --structure-only
-```
-
-如果已经有历史状态，想走自动增量：
-
-```bash
-code2skill ci --mode auto
-```
-
-## 安装
-
-发布版：
+Published package:
 
 ```bash
 pip install code2skill
 ```
 
-开发版：
+Development install:
 
 ```bash
 pip install -e .[dev]
 ```
 
-命令入口：
+CLI entrypoints:
 
 ```bash
 code2skill --help
 python -m code2skill --help
 ```
 
-## 常用环境变量
+## Quick Start
 
-这些变量是为了让本地和 CI 使用更短的命令。
-
-LLM API Key：
+Bash:
 
 ```bash
-export OPENAI_API_KEY=...
-export ANTHROPIC_API_KEY=...
 export QWEN_API_KEY=...
-```
-
-PowerShell:
-
-```powershell
-$env:OPENAI_API_KEY="..."
-$env:ANTHROPIC_API_KEY="..."
-$env:QWEN_API_KEY="..."
-```
-
-CLI 默认值：
-
-```bash
 export CODE2SKILL_LLM=qwen
 export CODE2SKILL_MODEL=qwen-plus-latest
-export CODE2SKILL_OUTPUT_DIR=.code2skill
-export CODE2SKILL_MAX_SKILLS=6
-export CODE2SKILL_BASE_REF=origin/main
+
+cd /path/to/repo
+code2skill scan
 ```
 
 PowerShell:
 
 ```powershell
+$env:QWEN_API_KEY="..."
 $env:CODE2SKILL_LLM="qwen"
 $env:CODE2SKILL_MODEL="qwen-plus-latest"
-$env:CODE2SKILL_OUTPUT_DIR=".code2skill"
-$env:CODE2SKILL_MAX_SKILLS="6"
-$env:CODE2SKILL_BASE_REF="origin/main"
+
+Set-Location D:\path\to\repo
+code2skill scan
 ```
 
-说明：
-
-- `qwen` 默认走阿里国际站兼容接口
-- `qwen` 会读取 `QWEN_API_KEY`，也兼容 `DASHSCOPE_API_KEY`
-- 如果没有配置对应 API key，命令会直接报错，不会静默降级
-
-## 命令速查
-
-完整扫描并生成 Skill：
-
-```bash
-code2skill scan --llm qwen --model qwen-plus-latest
-```
-
-只做结构扫描：
+If you only want Phase 1 structural analysis:
 
 ```bash
 code2skill scan --structure-only
 ```
 
-自动增量：
+If you already have previous state and want automatic incremental regeneration:
 
 ```bash
-code2skill ci --mode auto --base-ref origin/main
+code2skill ci --mode auto
 ```
 
-只做成本预估：
+## Core Commands
+
+Full scan and skill generation:
+
+```bash
+code2skill scan --llm qwen --model qwen-plus-latest
+```
+
+Structure-only scan:
+
+```bash
+code2skill scan --structure-only
+```
+
+Cost and impact estimation only:
 
 ```bash
 code2skill estimate
 ```
 
-把 Skill 合并到 Codex 规则文件：
+Automatic incremental mode for CI:
+
+```bash
+code2skill ci --mode auto --base-ref origin/main
+```
+
+Adapt generated skills into Codex format:
 
 ```bash
 code2skill adapt --target codex --source-dir .code2skill/skills
 ```
 
-适配所有目标：
+Adapt to all supported targets:
 
 ```bash
 code2skill adapt --target all --source-dir .code2skill/skills
 ```
 
-## 工作流说明
+## How The Pipeline Works
 
-### Phase 1：结构扫描
+### Phase 1: Structural Scan
 
-输入：
+Input:
 
-- 仓库路径
+- repository path
 
-输出：
+Output:
 
 - `project-summary.md`
 - `skill-blueprint.json`
@@ -228,67 +154,70 @@ code2skill adapt --target all --source-dir .code2skill/skills
 - `report.json`
 - `state/analysis-state.json`
 
-主要步骤：
+Main steps:
 
-1. 文件发现与过滤
-2. 粗评分与预算裁剪
-3. Python AST 骨架提取
-4. import graph 构建
-5. 基于结构信号修正优先级和角色
-6. 模式检测与抽象规则提炼
-7. 组装 `SkillBlueprint`
+1. discover and filter files
+2. apply coarse scoring and budget selection
+3. extract Python structure with AST
+4. build the internal import graph
+5. refine file priority and inferred role
+6. detect patterns and abstract rules
+7. assemble the final `SkillBlueprint`
 
-### Phase 2：Skill 规划
+### Phase 2: Skill Planning
 
-输入：
+Input:
 
 - `skill-blueprint.json`
 
-输出：
+Output:
 
 - `skill-plan.json`
 
-主要步骤：
+Main steps:
 
-1. 压缩项目画像、目录摘要、依赖簇、核心模块、规则和流程
-2. 调用 1 次 LLM
-3. 决定要生成哪些 Skill
-4. 为每个 Skill 选出最值得阅读的文件集合
+1. compress repository profile, directory summary, clusters, core modules, rules, and workflows
+2. make one LLM call
+3. decide which skills should exist
+4. choose the most valuable files to read for each skill
 
-### Phase 3：Skill 生成
+### Phase 3: Skill Generation
 
-输入：
+Input:
 
 - `skill-plan.json`
-- 每个 Skill 对应的文件正文或骨架
+- selected files or extracted skeletons
 
-输出：
+Output:
 
 - `skills/index.md`
 - `skills/*.md`
 
-主要步骤：
+Main steps:
 
-1. 按 Skill 收集上下文文件
-2. 筛选与该 Skill 最相关的抽象规则
-3. 调用 LLM 生成 Skill 文档
-4. 在增量模式下只修订受影响的 section
+1. gather exact file context for each planned skill
+2. inline smaller files and use structural summaries for larger files
+3. filter repository rules relevant to that skill
+4. generate grounded skill markdown
+5. sanitize and validate the final skill output
 
-### Adapt：目标格式适配
+### Adapt Phase
 
-输入：
+Input:
 
-- `skills/*.md`
+- generated `skills/*.md`
 
-输出：
+Output:
 
-- Cursor：复制到 `.cursor/rules/`
-- Claude：合并为 `CLAUDE.md`
-- Codex：合并为 `AGENTS.md`
-- Copilot：合并为 `.github/copilot-instructions.md`
-- Windsurf：合并为 `.windsurfrules`
+- Cursor rules
+- `CLAUDE.md`
+- `AGENTS.md`
+- `.github/copilot-instructions.md`
+- `.windsurfrules`
 
-## 输出目录
+## Output Layout
+
+Typical output:
 
 ```text
 .code2skill/
@@ -308,199 +237,95 @@ code2skill adapt --target all --source-dir .code2skill/skills
     analysis-state.json
 ```
 
-## CI / 增量使用建议
+## LLM Backends
 
-推荐把 `.code2skill/` 当成 CI cache 或 artifact，而不是提交进仓库。
+Supported providers:
 
-增量模式依赖这些文件：
+- `openai`
+- `claude`
+- `qwen`
 
-- `.code2skill/state/analysis-state.json`
-- `.code2skill/skill-plan.json`
-- 最好同时恢复 `.code2skill/skills/`
+Environment variables:
 
-如果这些文件缺失，或者 diff 条件不满足，`ci --mode auto` 会自动回退到全量模式。
-
-### 自动回退到全量的常见情况
-
-- 没有历史状态
-- 改动了核心配置文件，例如 `pyproject.toml`
-- 改动文件数超过 `--max-incremental-changed-files`
-- 当前目录不是 Git 仓库，且也没有提供 `--diff-file`
-
-### GitHub Actions 示例
-
-```yaml
-name: code2skill
-
-on:
-  pull_request:
-
-jobs:
-  build-skills:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Restore code2skill cache
-        uses: actions/cache@v4
-        with:
-          path: .code2skill
-          key: code2skill-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            code2skill-${{ runner.os }}-${{ github.ref_name }}-
-
-      - name: Install
-        run: pip install -e .[dev]
-
-      - name: Run code2skill
-        env:
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          CODE2SKILL_LLM: qwen
-          CODE2SKILL_MODEL: qwen-plus-latest
-        run: |
-          code2skill ci \
-            --mode auto \
-            --base-ref origin/${{ github.base_ref }} \
-            --head-ref HEAD
-
-      - name: Upload outputs
-        uses: actions/upload-artifact@v4
-        with:
-          name: code2skill-output
-          path: .code2skill
-```
-
-说明：
-
-- `fetch-depth: 0` 很重要，否则基线提交可能不在本地历史里
-- `restore-keys` 能让同一分支上的后续提交复用历史状态
-- 第一次没有 cache 时，`ci --mode auto` 会自动走全量
-
-## 生成产物与 Git 管理
-
-默认情况下，仓库根目录下的这些目录已经在 `.gitignore` 中忽略：
-
-- `.code2skill/`
-- `.code2skill-*/`
-- `.pypi-smoke/`
-
-建议：
-
-- 正式产物统一写到 `.code2skill/`
-- 本地试跑、真人验收、不同模型对比时，用 `.code2skill-qwen-live/`、`.code2skill-test/` 这类命名
-- 不要把测试生成的 `skills/` 目录提交到 Git
-- 如果要在 PR 中查看结果，优先用 artifact，而不是直接提交生成文件
-
-## 这个项目内部是怎么完成的
-
-如果你想理解 `code2skill` 自己是如何工作的，可以从这些模块开始：
-
-- `src/code2skill/scanner/`：文件发现、过滤、预算裁剪、优先级评分
-- `src/code2skill/extractors/python_extractor.py`：Python AST 骨架提取
-- `src/code2skill/import_graph.py`：仓库内 import graph
-- `src/code2skill/pattern_detector.py`：同角色文件模式检测
-- `src/code2skill/analyzers/skill_blueprint_builder.py`：把扫描结果组装成 `SkillBlueprint`
-- `src/code2skill/skill_planner.py`：生成 `skill-plan.json`
-- `src/code2skill/skill_generator.py`：生成和增量修订 `skills/*.md`
-- `src/code2skill/core.py`：统一编排 `scan / estimate / ci`
-
-推荐阅读顺序：
-
-1. `cli.py`
-2. `core.py`
-3. `scanner/` 与 `extractors/`
-4. `analyzers/`
-5. `skill_planner.py`
-6. `skill_generator.py`
-7. `adapt.py`
-
-## 发布检查清单
-
-开发与发布前推荐跑：
+Bash:
 
 ```bash
-pip install -e .[dev]
-python -m pytest tests -q
-python -m build
-python -m twine check dist/code2skill-*.tar.gz dist/code2skill-*.whl
-```
-
-## 当前边界
-
-- 目前只面向 Python 仓库
-- 生成的 Skill 已适合辅助编码与审查，但不应被当作绝对事实
-- 增量更新依赖历史状态文件与可用 diff
-- `report.json` 中部分影响摘要仍带启发式成分，最终以 `skill-plan.json` 和生成出来的 `skills/*.md` 为准
-
-## English Quick Reference
-
-### What It Does
-
-`code2skill` turns a Python repository into:
-
-- a structural blueprint
-- a skill plan
-- generated skill markdown files
-- cached state for incremental CI/CD runs
-
-### Quick Start
-
-From the target repo root:
-
-```bash
+export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...
 export QWEN_API_KEY=...
-export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus-latest
-code2skill scan
 ```
 
 PowerShell:
 
 ```powershell
+$env:OPENAI_API_KEY="..."
+$env:ANTHROPIC_API_KEY="..."
 $env:QWEN_API_KEY="..."
-$env:CODE2SKILL_LLM="qwen"
-$env:CODE2SKILL_MODEL="qwen-plus-latest"
-code2skill scan
 ```
 
-### Main Commands
+Common CLI defaults:
 
 ```bash
-code2skill scan
-code2skill scan --structure-only
-code2skill ci --mode auto --base-ref origin/main
-code2skill estimate
-code2skill adapt --target codex --source-dir .code2skill/skills
+export CODE2SKILL_LLM=qwen
+export CODE2SKILL_MODEL=qwen-plus-latest
+export CODE2SKILL_OUTPUT_DIR=.code2skill
+export CODE2SKILL_MAX_SKILLS=6
+export CODE2SKILL_BASE_REF=origin/main
 ```
 
-### Incremental CI Requirements
+Notes:
 
-Restore:
+- `qwen` uses the DashScope international compatible endpoint by default
+- `qwen` reads `QWEN_API_KEY` and also accepts `DASHSCOPE_API_KEY`
+- missing credentials fail fast rather than silently degrading
 
-- `.code2skill/state/analysis-state.json`
-- `.code2skill/skill-plan.json`
-- preferably `.code2skill/skills/`
+## Incremental CI
 
-If they are missing, `ci --mode auto` falls back to a full run.
+`code2skill ci --mode auto` is intended for automation scenarios.
 
-### Release Validation
+It can:
 
-```bash
-pip install -e .[dev]
-python -m pytest tests -q
-python -m build
-python -m twine check dist/code2skill-*.tar.gz dist/code2skill-*.whl
-```
+- detect changed files from git state or an explicit diff file
+- expand impact through internal reverse dependencies
+- select affected skills
+- regenerate only the necessary outputs
+- clean up stale skill files when the planned set changes
+
+Common reasons to fall back to a full rebuild:
+
+- no previous state exists
+- critical config changed
+- too many files changed
+- repository metadata changed enough that incremental confidence is low
+
+## Why The Output Is Useful For AI Tools
+
+The generated skill documents are meant to be consumed directly by coding assistants, not just read by humans.
+
+They focus on:
+
+- module boundaries
+- call flows
+- stable repository rules
+- evidence-backed patterns
+- target-specific rule packaging
+
+That makes them more reusable than one-off prompts and easier to keep aligned with repository changes.
+
+## Typical Use Cases
+
+- generate Codex `AGENTS.md` from an existing Python backend repository
+- produce Cursor rules from real source code instead of manually written docs
+- give Claude Code a repository-specific skill set before large refactors
+- keep AI-facing repository guidance updated in CI after code changes
+
+## Limitations
+
+- currently optimized for Python codebases
+- JavaScript or TypeScript structural analysis is not a first-class target
+- quality still depends on repository clarity and the chosen model
+- this is an alpha release line, so output quality will continue to evolve
 
 ## License
 
-Apache-2.0
+Apache-2.0. See [LICENSE](./LICENSE).

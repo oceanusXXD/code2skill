@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code2skill"
-version = "0.1.3"
-description = "Generate grounded AI coding assistant skills and repository blueprints from real Python codebases."
+version = "0.1.0"
+description = "Generate AI-ready skills, repository blueprints, and rule files from real Python repositories."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "Apache-2.0"
@@ -16,7 +16,7 @@ authors = [
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
 ]
-keywords = ["ai", "python", "repository-analysis", "skills", "codex", "cursor", "claude-code", "copilot"]
+keywords = ["ai", "python", "repository-analysis", "skills", "agents", "codex", "cursor", "claude-code", "copilot", "windsurf"]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
