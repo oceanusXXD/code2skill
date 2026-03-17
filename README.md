@@ -32,7 +32,15 @@ Chinese first, with an English quick reference at the end.
 ```bash
 export QWEN_API_KEY=...
 export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus
+export CODE2SKILL_MODEL=qwen-plus-latest
+```
+
+PowerShell:
+
+```powershell
+$env:QWEN_API_KEY="..."
+$env:CODE2SKILL_LLM="qwen"
+$env:CODE2SKILL_MODEL="qwen-plus-latest"
 ```
 
 进入要分析的仓库目录后直接运行：
@@ -88,14 +96,32 @@ export ANTHROPIC_API_KEY=...
 export QWEN_API_KEY=...
 ```
 
+PowerShell:
+
+```powershell
+$env:OPENAI_API_KEY="..."
+$env:ANTHROPIC_API_KEY="..."
+$env:QWEN_API_KEY="..."
+```
+
 CLI 默认值：
 
 ```bash
 export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus
+export CODE2SKILL_MODEL=qwen-plus-latest
 export CODE2SKILL_OUTPUT_DIR=.code2skill
 export CODE2SKILL_MAX_SKILLS=6
 export CODE2SKILL_BASE_REF=origin/main
+```
+
+PowerShell:
+
+```powershell
+$env:CODE2SKILL_LLM="qwen"
+$env:CODE2SKILL_MODEL="qwen-plus-latest"
+$env:CODE2SKILL_OUTPUT_DIR=".code2skill"
+$env:CODE2SKILL_MAX_SKILLS="6"
+$env:CODE2SKILL_BASE_REF="origin/main"
 ```
 
 说明：
@@ -109,7 +135,7 @@ export CODE2SKILL_BASE_REF=origin/main
 完整扫描并生成 Skill：
 
 ```bash
-code2skill scan --llm qwen --model qwen-plus
+code2skill scan --llm qwen --model qwen-plus-latest
 ```
 
 只做结构扫描：
@@ -298,7 +324,7 @@ jobs:
         env:
           QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
           CODE2SKILL_LLM: qwen
-          CODE2SKILL_MODEL: qwen-plus
+          CODE2SKILL_MODEL: qwen-plus-latest
         run: |
           code2skill ci \
             --mode auto \
@@ -392,7 +418,16 @@ From the target repo root:
 ```bash
 export QWEN_API_KEY=...
 export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus
+export CODE2SKILL_MODEL=qwen-plus-latest
+code2skill scan
+```
+
+PowerShell:
+
+```powershell
+$env:QWEN_API_KEY="..."
+$env:CODE2SKILL_LLM="qwen"
+$env:CODE2SKILL_MODEL="qwen-plus-latest"
 code2skill scan
 ```
 

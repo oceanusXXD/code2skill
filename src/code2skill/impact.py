@@ -10,6 +10,7 @@ from .models import (
     SkillImpactIndexEntry,
     SourceFileSummary,
 )
+from .python_imports import build_python_module_index, resolve_python_imports
 
 
 class ImpactAnalyzer:
@@ -18,17 +19,21 @@ class ImpactAnalyzer:
         records: dict[str, CachedFileRecord],
     ) -> dict[str, CachedFileRecord]:
         known_paths = set(records)
+        module_index = build_python_module_index(known_paths)
         enriched: dict[str, CachedFileRecord] = {}
         for path, record in records.items():
             summary = record.source_summary
             if summary is None:
                 enriched[path] = record
                 continue
-            internal_dependencies = self._resolve_dependencies(
+            if record.language != "python":
+                enriched[path] = record
+                continue
+            internal_dependencies = resolve_python_imports(
                 source_path=Path(path),
-                language=record.language,
                 imports=summary.imports,
                 known_paths=known_paths,
+                module_index=module_index,
             )
             enriched[path] = replace(
                 record,
@@ -101,57 +106,3 @@ class ImpactAnalyzer:
             if affected & set(entry.related_paths)
         ]
         return sorted(matched)
-
-    def _resolve_dependencies(
-        self,
-        source_path: Path,
-        language: str | None,
-        imports: list[str],
-        known_paths: set[str],
-    ) -> list[str]:
-        if language != "python":
-            return []
-
-        resolved: set[str] = set()
-        for import_name in imports:
-            resolved.update(
-                self._resolve_python_import(
-                    source_path=source_path,
-                    import_name=import_name,
-                    known_paths=known_paths,
-                )
-            )
-        return sorted(resolved)
-
-    def _resolve_python_import(
-        self,
-        source_path: Path,
-        import_name: str,
-        known_paths: set[str],
-    ) -> list[str]:
-        if not import_name:
-            return []
-        if import_name.startswith("."):
-            level = len(import_name) - len(import_name.lstrip("."))
-            module_name = import_name[level:]
-            base_dir = source_path.parent
-            for _ in range(max(level - 1, 0)):
-                base_dir = base_dir.parent
-            target = base_dir
-            if module_name:
-                target = target.joinpath(*module_name.split("."))
-            return self._expand_python_candidates(target, known_paths)
-
-        module_path = Path(*import_name.split("."))
-        return self._expand_python_candidates(module_path, known_paths)
-
-    def _expand_python_candidates(
-        self,
-        target: Path,
-        known_paths: set[str],
-    ) -> list[str]:
-        candidates = [
-            target.with_suffix(".py").as_posix(),
-            (target / "__init__.py").as_posix(),
-        ]
-        return [candidate for candidate in candidates if candidate in known_paths]

@@ -101,7 +101,7 @@ class ClaudeBackend:
 
 @dataclass(frozen=True)
 class QwenBackend:
-    model: str = "qwen-plus"
+    model: str = "qwen-plus-latest"
     api_key: str | None = None
     base_url: str = "https://dashscope-intl.aliyuncs.com/compatible-mode/v1/chat/completions"
 

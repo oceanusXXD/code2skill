@@ -85,3 +85,35 @@ def test_import_graph_metrics_and_clusters() -> None:
     pagerank = graph.get_pagerank()
     assert max(pagerank, key=pagerank.get) == "src/services/user_service.py"
 
+
+def test_import_graph_resolves_python_src_layout_imports() -> None:
+    graph = ImportGraph()
+    graph.build(
+        {
+            "src/demo_user_service/api/users.py": _summary(
+                "src/demo_user_service/api/users.py",
+                "python",
+                [
+                    "demo_user_service.models",
+                    "demo_user_service.services.user_service",
+                ],
+            ),
+            "src/demo_user_service/models.py": _summary(
+                "src/demo_user_service/models.py",
+                "python",
+                [],
+            ),
+            "src/demo_user_service/services/user_service.py": _summary(
+                "src/demo_user_service/services/user_service.py",
+                "python",
+                ["demo_user_service.models"],
+            ),
+        }
+    )
+
+    assert graph.total_internal_edges() == 3
+    assert graph.internal_dependencies_for("src/demo_user_service/api/users.py") == [
+        "src/demo_user_service/models.py",
+        "src/demo_user_service/services/user_service.py",
+    ]
+    assert graph.get_in_degree("src/demo_user_service/models.py") == 2

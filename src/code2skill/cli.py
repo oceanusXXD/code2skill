@@ -23,7 +23,7 @@ def build_parser() -> argparse.ArgumentParser:
         ),
         epilog=(
             "示例:\n"
-            "  code2skill scan --llm qwen --model qwen-plus\n"
+            "  code2skill scan --llm qwen --model qwen-plus-latest\n"
             "  code2skill ci --mode auto --base-ref origin/main --llm qwen\n"
             "  code2skill adapt --target codex"
         ),
@@ -138,6 +138,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(f"changed_files: {len(result.changed_files)}")
     if result.affected_skills:
         print(f"affected_skills: {', '.join(result.affected_skills)}")
+    if result.generated_skills:
+        print(f"generated_skills: {', '.join(result.generated_skills)}")
     print(f"output_dir: {result.output_dir}")
     if result.report_path is not None:
         print(f"report: {result.report_path}")
