@@ -6,39 +6,153 @@
 
 English README. For Chinese documentation, see [README.zh-CN.md](./README.zh-CN.md).
 
-`code2skill` turns a real Python repository into structured project knowledge, reusable AI skill documents, and IDE-ready rule files for tools such as Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
+`code2skill` turns a real Python repository into structured repository knowledge, AI-ready Skill documents, and target-specific rule files for Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
 
-Instead of relying on one long prompt, it builds durable repository artifacts that can be committed, reviewed, reused, and incrementally regenerated in CI.
+It is built for repositories that need repeatable AI context instead of one-off prompts. The pipeline scans code first, extracts structure and evidence, plans focused skills, and then generates grounded Markdown that can be reused locally or in CI.
+
+## What It Guarantees
+
+- Python-first analysis with `ast`, import graph analysis, file-role inference, and pattern detection
+- Evidence-first prompts: built-in prompts are in English, ban emoji, and avoid unsupported claims
+- Durable outputs: repository knowledge is written to files instead of chat history
+- Measurable runs: every `scan`, `estimate`, or `ci` execution writes a `report.json`
+- Incremental operation: CI can reuse prior state and only regenerate impacted skills
+
+## Command Model
+
+| Command | Uses LLM | Writes outputs | Primary purpose |
+|---|---|---|---|
+| `scan` | Yes, unless `--structure-only` | Yes | Full local generation |
+| `estimate` | No | `report.json` only | Cost and impact preview |
+| `ci` | Yes, unless `--structure-only` | Yes | Automated full or incremental execution |
+| `adapt` | No | Yes | Copy or merge generated skills into tool-specific targets |
 
 ## What It Generates
 
-From one Python repository, `code2skill` can generate:
+From one Python repository, `code2skill` can produce:
 
-- `project-summary.md` for a human-readable overview
-- `skill-blueprint.json` for the structured Phase 1 repository blueprint
-- `skill-plan.json` for LLM-generated skill planning
+- `project-summary.md` for a human-readable repository overview
+- `skill-blueprint.json` for the Phase 1 structural blueprint
+- `skill-plan.json` for the LLM-planned skill set
 - `skills/index.md` and `skills/*.md` for grounded AI-consumable skill documents
-- `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, and other target-specific outputs via `adapt`
+- `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules` via `adapt`
+- `report.json` for execution metrics, token estimates, and impact summaries
+- `state/analysis-state.json` for incremental CI reuse
 
-## Why It Exists
+## Pipeline
 
-Most AI coding workflows still depend on ad-hoc prompts, chat history, or manually curated notes. That does not scale well for real repositories.
+### Phase 1: Structural Scan
 
-`code2skill` is designed to:
+Input:
 
-- extract repository structure before asking an LLM to synthesize rules
-- preserve repository knowledge as files rather than transient conversations
-- make AI context reproducible in local workflows and CI
-- keep generated guidance grounded in code, imports, patterns, and selected evidence
+- repository path
 
-## Current Scope
+Output:
 
-- Python repositories only
-- Python source analysis uses `ast`
-- Phase 1 does not require an LLM
-- Supports `scan`, `estimate`, `ci`, and `adapt`
-- Supports `openai`, `claude`, and `qwen`
-- Default generated prompts and skill documents are in English
+- `project-summary.md`
+- `skill-blueprint.json`
+- `references/architecture.md`
+- `references/code-style.md`
+- `references/workflows.md`
+- `references/api-usage.md`
+- `report.json`
+- `state/analysis-state.json`
+
+Main steps:
+
+1. Discover and filter files.
+2. Apply coarse scoring and budget selection.
+3. Extract Python structure with `ast`.
+4. Build the internal import graph.
+5. Refine file priority and inferred roles.
+6. Detect patterns and abstract rules.
+7. Assemble the final `SkillBlueprint`.
+
+### Phase 2: Skill Planning
+
+Input:
+
+- `skill-blueprint.json`
+
+Output:
+
+- `skill-plan.json`
+
+Main steps:
+
+1. Compress the project profile, directories, clusters, modules, rules, and workflows.
+2. Make one LLM call.
+3. Decide which skills should exist.
+4. Pick the most representative files for each skill.
+
+### Phase 3: Skill Generation
+
+Input:
+
+- `skill-plan.json`
+- selected source files or extracted structural summaries
+
+Output:
+
+- `skills/index.md`
+- `skills/*.md`
+
+Main steps:
+
+1. Gather the exact context for each skill.
+2. Inline small files and structural summaries for large files.
+3. Filter repository rules relevant to that skill.
+4. Generate one grounded Skill document per skill.
+5. Sanitize the final Markdown and keep uncertainty explicit as `[Needs confirmation]`.
+
+### Adapt Phase
+
+Input:
+
+- generated `skills/*.md`
+
+Output:
+
+- Cursor rules
+- `CLAUDE.md`
+- `AGENTS.md`
+- `.github/copilot-instructions.md`
+- `.windsurfrules`
+
+## Prompt Policy
+
+The built-in prompts are intentionally opinionated:
+
+- Planner output must be in English, use kebab-case names, stay evidence-based, and avoid emoji.
+- Skill generation must stay grounded in provided files and rules only.
+- Generated skills must use a fixed five-section structure.
+- When evidence is incomplete, the output must say `[Needs confirmation]` instead of inventing certainty.
+
+This keeps the generated documents more stable for downstream AI tools and easier to review in Git.
+
+## Measured On This Repository
+
+The numbers below were collected on `2026-03-17` from this repository at commit `3714510`, on Windows with Python `3.10.6`, using the current default limits and heuristic pricing.
+
+| Metric | Result |
+|---|---|
+| `scan --structure-only` wall-clock time | `1.33s` |
+| `estimate` wall-clock time | `1.30s` |
+| Candidate files / selected files | `51 / 31` |
+| Bytes read in full structure-only scan | `314,585` |
+| Retained context size | `119,984 chars` |
+| Heuristic recommended skills | `2` |
+| First-generation estimate | `6,138` input tokens, `1,610` output tokens |
+| Per-skill estimate | `project-overview: 450 in / 850 out`, `backend-architecture: 5,688 in / 760 out` |
+| Second `ci --mode auto` run on reused state | `incremental` |
+| Incremental no-diff bytes read | `20,939` |
+| Incremental no-diff affected skills | `0` |
+
+Important notes:
+
+- The default pricing mode is heuristic. It estimates chars and tokens, but leaves USD at `0.0` until you provide real model pricing.
+- `estimate` does not call an LLM. It predicts likely first-generation, incremental rewrite, and incremental patch costs from the scanned repository structure.
+- `ci --mode auto` really does switch modes based on repository state. On this repo, the first run was `full` because no prior state existed; the second run was `incremental`.
 
 ## Installation
 
@@ -85,39 +199,19 @@ Set-Location D:\path\to\repo
 code2skill scan
 ```
 
-If you only want Phase 1 structural analysis:
-
-```bash
-code2skill scan --structure-only
-```
-
-If you already have previous state and want automatic incremental regeneration:
-
-```bash
-code2skill ci --mode auto
-```
-
-## Core Commands
-
-Full scan and skill generation:
-
-```bash
-code2skill scan --llm qwen --model qwen-plus-latest
-```
-
 Structure-only scan:
 
 ```bash
 code2skill scan --structure-only
 ```
 
-Cost and impact estimation only:
+Cost and impact preview:
 
 ```bash
 code2skill estimate
 ```
 
-Automatic incremental mode for CI:
+Automatic incremental mode:
 
 ```bash
 code2skill ci --mode auto --base-ref origin/main
@@ -129,91 +223,152 @@ Adapt generated skills into Codex format:
 code2skill adapt --target codex --source-dir .code2skill/skills
 ```
 
-Adapt to all supported targets:
+## LLM Backends
+
+Supported providers:
+
+- `openai`
+- `claude`
+- `qwen`
+
+Environment variables:
 
 ```bash
-code2skill adapt --target all --source-dir .code2skill/skills
+export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...
+export QWEN_API_KEY=...
 ```
 
-## How The Pipeline Works
+Common defaults:
 
-### Phase 1: Structural Scan
+```bash
+export CODE2SKILL_LLM=qwen
+export CODE2SKILL_MODEL=qwen-plus-latest
+export CODE2SKILL_OUTPUT_DIR=.code2skill
+export CODE2SKILL_MAX_SKILLS=6
+export CODE2SKILL_BASE_REF=origin/main
+```
 
-Input:
+Notes:
 
-- repository path
+- `qwen` uses the DashScope international compatible endpoint by default.
+- `qwen` reads `QWEN_API_KEY` and also accepts `DASHSCOPE_API_KEY`.
+- Missing credentials fail fast instead of silently degrading.
 
-Output:
+## Cost Estimation And `report.json`
 
-- `project-summary.md`
-- `skill-blueprint.json`
-- `references/architecture.md`
-- `references/code-style.md`
-- `references/workflows.md`
-- `references/api-usage.md`
-- `report.json`
-- `state/analysis-state.json`
+`estimate` is intended for preflight checks and CI planning. It does not write the full artifact set. It only writes `report.json`.
 
-Main steps:
+The report includes:
 
-1. discover and filter files
-2. apply coarse scoring and budget selection
-3. extract Python structure with AST
-4. build the internal import graph
-5. refine file priority and inferred role
-6. detect patterns and abstract rules
-7. assemble the final `SkillBlueprint`
+- selected file counts and retained character volume
+- full-scan bytes read
+- changed files, affected files, and affected skills
+- `first_generation_cost`
+- `incremental_rewrite_cost`
+- `incremental_patch_cost`
+- pricing metadata and execution notes
 
-### Phase 2: Skill Planning
+If you want real USD output instead of token-only estimates, pass a pricing file:
 
-Input:
+```bash
+code2skill estimate --pricing-file pricing.json
+```
 
-- `skill-blueprint.json`
+`pricing.json` must contain:
 
-Output:
+```json
+{
+  "model": "qwen-plus-latest",
+  "input_per_1m": 0.0,
+  "output_per_1m": 0.0,
+  "chars_per_token": 4.0
+}
+```
 
-- `skill-plan.json`
+Replace `0.0` with your current provider prices before using it for budgeting.
 
-Main steps:
+## CI/CD Integration
 
-1. compress repository profile, directory summary, clusters, core modules, rules, and workflows
-2. make one LLM call
-3. decide which skills should exist
-4. choose the most valuable files to read for each skill
+`code2skill ci --mode auto` is the main automation entrypoint.
 
-### Phase 3: Skill Generation
+It can:
 
-Input:
+- detect changed files from git history or an explicit diff file
+- expand impact through reverse dependencies
+- map changed files to affected skills
+- regenerate only the required Skill outputs
+- prune stale skill files when the skill set changes
 
-- `skill-plan.json`
-- selected files or extracted skeletons
+Common reasons to fall back to a full rebuild:
 
-Output:
+- no previous `.code2skill/state/analysis-state.json`
+- no previous `skill-plan.json`
+- important config changed, such as `pyproject.toml`
+- too many changed files for a safe incremental run
 
-- `skills/index.md`
-- `skills/*.md`
+Recommended GitHub Actions workflow:
 
-Main steps:
+```yaml
+name: code2skill
 
-1. gather exact file context for each planned skill
-2. inline smaller files and use structural summaries for larger files
-3. filter repository rules relevant to that skill
-4. generate grounded skill markdown
-5. sanitize and validate the final skill output
+on:
+  pull_request:
+  push:
+    branches:
+      - main
 
-### Adapt Phase
+jobs:
+  build-skills:
+    runs-on: ubuntu-latest
 
-Input:
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-- generated `skills/*.md`
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
 
-Output:
+      - name: Restore code2skill cache
+        uses: actions/cache@v4
+        with:
+          path: .code2skill
+          key: code2skill-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
+          restore-keys: |
+            code2skill-${{ runner.os }}-${{ github.ref_name }}-
+            code2skill-${{ runner.os }}-
 
-- Cursor rules
-- `CLAUDE.md`
-- `AGENTS.md`
-- `.github/copilot-instructions.md`
-- `.windsurfrules`
+      - name: Install
+        run: pip install code2skill
+
+      - name: Run code2skill
+        env:
+          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
+          CODE2SKILL_LLM: qwen
+          CODE2SKILL_MODEL: qwen-plus-latest
+        run: |
+          code2skill ci \
+            --mode auto \
+            --base-ref origin/${{ github.base_ref || 'main' }} \
+            --head-ref HEAD
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: code2skill-output
+          path: .code2skill
+```
+
+Notes:
+
+- `fetch-depth: 0` matters, otherwise the base ref may not exist locally.
+- Caching `.code2skill` is what enables fast incremental reuse.
+- The first CI run on a branch usually behaves like a full build because there is no prior state.
+- If you want a no-LLM CI sanity check, use `code2skill ci --mode auto --structure-only`.
 
 ## Output Layout
 
@@ -237,94 +392,19 @@ Typical output:
     analysis-state.json
 ```
 
-## LLM Backends
-
-Supported providers:
-
-- `openai`
-- `claude`
-- `qwen`
-
-Environment variables:
-
-Bash:
-
-```bash
-export OPENAI_API_KEY=...
-export ANTHROPIC_API_KEY=...
-export QWEN_API_KEY=...
-```
-
-PowerShell:
-
-```powershell
-$env:OPENAI_API_KEY="..."
-$env:ANTHROPIC_API_KEY="..."
-$env:QWEN_API_KEY="..."
-```
-
-Common CLI defaults:
-
-```bash
-export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus-latest
-export CODE2SKILL_OUTPUT_DIR=.code2skill
-export CODE2SKILL_MAX_SKILLS=6
-export CODE2SKILL_BASE_REF=origin/main
-```
-
-Notes:
-
-- `qwen` uses the DashScope international compatible endpoint by default
-- `qwen` reads `QWEN_API_KEY` and also accepts `DASHSCOPE_API_KEY`
-- missing credentials fail fast rather than silently degrading
-
-## Incremental CI
-
-`code2skill ci --mode auto` is intended for automation scenarios.
-
-It can:
-
-- detect changed files from git state or an explicit diff file
-- expand impact through internal reverse dependencies
-- select affected skills
-- regenerate only the necessary outputs
-- clean up stale skill files when the planned set changes
-
-Common reasons to fall back to a full rebuild:
-
-- no previous state exists
-- critical config changed
-- too many files changed
-- repository metadata changed enough that incremental confidence is low
-
-## Why The Output Is Useful For AI Tools
-
-The generated skill documents are meant to be consumed directly by coding assistants, not just read by humans.
-
-They focus on:
-
-- module boundaries
-- call flows
-- stable repository rules
-- evidence-backed patterns
-- target-specific rule packaging
-
-That makes them more reusable than one-off prompts and easier to keep aligned with repository changes.
-
 ## Typical Use Cases
 
 - generate Codex `AGENTS.md` from an existing Python backend repository
-- produce Cursor rules from real source code instead of manually written docs
-- give Claude Code a repository-specific skill set before large refactors
-- keep AI-facing repository guidance updated in CI after code changes
+- generate Cursor rules from real source code instead of manually maintained notes
+- give Claude Code a repository-specific skill set before a large refactor
+- keep AI-facing repository guidance current in CI after changes land
 
 ## Limitations
 
-- currently optimized for Python codebases
-- JavaScript or TypeScript structural analysis is not a first-class target
-- quality still depends on repository clarity and the chosen model
-- this is an alpha release line, so output quality will continue to evolve
+- optimized for Python repositories
+- non-Python code is not a first-class analysis target
+- output quality still depends on repository clarity and the chosen model
+- the package is still in the `0.1.x` stage and will continue to evolve
 
 ## License
 
