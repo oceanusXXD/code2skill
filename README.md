@@ -6,9 +6,38 @@
 
 English README. For Chinese documentation, see [README.zh-CN.md](./README.zh-CN.md).
 
-`code2skill` turns a real Python repository into structured repository knowledge, AI-ready Skill documents, and target-specific rule files for Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
+`code2skill` is a CLI for real Python repositories. It turns source code into structured project knowledge, Skill documents that AI coding assistants can consume directly, and rule files adapted for tools such as Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
 
-It is built for repositories that need repeatable AI context instead of one-off prompts. The pipeline scans code first, extracts structure and evidence, plans focused skills, and then generates grounded Markdown that can be reused locally or in CI.
+It provides a full chain from repository scanning and structural analysis to Skill generation and rule adaptation, with incremental updates based on diffs and historical state. The generated outputs are written to disk so they can be reviewed, committed, reused, and continuously integrated into local development and CI workflows.
+
+## Why Skills Matter
+
+In traditional software development, the `README` is the standard entry document for a project. It is written for human developers and usually covers project introduction, installation, usage, development setup, and examples.
+
+In the AI IDE era, AI tools also read READMEs, documentation, and source code to understand a project. At that point, a repository needs a form of knowledge that is better suited for direct AI consumption. READMEs still matter, but they often mix user guidance, developer guidance, background context, historical notes, sample snippets, and presentation-oriented material. That structure is natural for human readers. For AI systems, however, project conventions, important patterns, and execution boundaries are more useful when they are presented in a more unified and structured form.
+
+A Skill is that AI-oriented project document form.
+
+In practice, a Skill can be treated as an engineering-grade README for AI. It organizes implementation-relevant knowledge into stable, clear, and maintainable documents so that AI can read consistent project context across different tools, sessions, and stages of work.
+
+Skills let a repository express information such as:
+
+- the core structure of the project and the responsibility boundaries of modules
+- the important roles, call relationships, and behavioral constraints in the code
+- existing patterns, conventions, and preferred extension paths
+- the implementation path and modification style expected for specific tasks
+- a unified source for downstream tool-specific rule files
+
+Once that information is materialized as Skills, it can be consumed directly by AI IDEs, agents, and automation workflows. Developers can also iterate on collaboration practices around those Skills and turn "how this repository should be worked on" into an auditable, commit-friendly, evolvable engineering asset.
+
+## What code2skill Provides
+
+`code2skill` builds project knowledge from real Python repositories and generates a set of outputs that can be written to disk, tracked over time, and integrated into normal engineering workflows.
+
+It covers the full chain from repository scanning, structural analysis, Skill planning, and document generation to tool-specific rule adaptation. It also supports incremental regeneration so Skills can stay aligned as the repository evolves.
+
+For one-off local analysis, `code2skill` can scan an entire repository and generate the full result set.
+For ongoing development workflows, it can combine historical state and code diffs to rebuild only the affected Skills, reducing repeated generation cost and making CI-based updates practical.
 
 ## What It Guarantees
 
@@ -38,6 +67,61 @@ From one Python repository, `code2skill` can produce:
 - `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules` via `adapt`
 - `report.json` for execution metrics, token estimates, and impact summaries
 - `state/analysis-state.json` for incremental CI reuse
+
+## The Role Of Skills In A Repository
+
+Skills are the standardized AI-facing expression layer of repository knowledge.
+
+They connect repository structure, implementation details, team conventions, and tool rules so an AI system can enter the project with one consistent context source instead of repeatedly reconstructing it from README files, scattered docs, previous implementations, and chat history.
+
+In engineering practice, that creates direct value:
+
+- it gives AI IDEs a unified, stable, low-noise project entry point
+- it lets developers turn recurring implementation patterns into reusable guidance
+- it helps future changes follow the same boundaries and extension paths already present in the repository
+- it gives rule-file generation a single consistent source of truth
+- it keeps repository knowledge incrementally maintained as code changes, instead of periodically rewritten by hand
+
+That is why `code2skill` is really about organizing, transmitting, and updating repository knowledge for AI collaboration.
+
+## Incremental Updates And Ongoing Maintenance
+
+Repository knowledge needs to evolve with the code.
+
+`code2skill` supports incremental regeneration based on historical analysis state and the current change scope. After code changes, it can identify the affected areas, rebuild the relevant Skills, and preserve outputs that are still valid. That makes it suitable for local development loops, pull request checks, and continuous CI automation.
+
+This workflow has several practical benefits:
+
+- it reduces the cost of repeated full regeneration on larger repositories
+- it keeps Skills synchronized with the current code state
+- it moves project-knowledge maintenance into the normal development process
+- it makes generated outputs reviewable, comparable, and commit-friendly
+
+Skills therefore become a long-lived engineering asset rather than a temporary prompt artifact.
+
+## Adapting To Multiple AI Tools
+
+Different AI coding tools use different rule file formats, but they all need high-quality project context.
+
+`code2skill` first generates a unified Skill-centered knowledge layer, then uses `adapt` to copy or merge that layer into target-specific formats, including:
+
+- `AGENTS.md`
+- `CLAUDE.md`
+- `.cursor/rules/*`
+- `.github/copilot-instructions.md`
+- `.windsurfrules`
+
+That approach lets a repository maintain one core knowledge representation and distribute consistent context and constraints to multiple AI tools without duplicating maintenance effort.
+
+## When To Use code2skill
+
+`code2skill` is a good fit for:
+
+- Python repositories that want a stable project context for AI IDEs
+- teams that want repository knowledge committed as files instead of kept in chat threads
+- engineering workflows that need CI-based updates for AI rule files
+- projects that want diff-aware control over regeneration scope and cost
+- repositories that need one knowledge source adapted to multiple AI coding tools
 
 ## Pipeline
 
