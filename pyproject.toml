@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "code2skill"
-version = "0.1.1"
+version = "0.1.4"
 description = "Generate repository-aware Skills, blueprints, and AI rule files from real Python codebases."
 readme = "README.md"
 requires-python = ">=3.10"
@@ -37,7 +37,7 @@ Homepage = "https://github.com/oceanusXXD/code2skill"
 Repository = "https://github.com/oceanusXXD/code2skill"
 Documentation = "https://github.com/oceanusXXD/code2skill#readme"
 Issues = "https://github.com/oceanusXXD/code2skill/issues"
-Changelog = "https://github.com/oceanusXXD/code2skill/blob/main/docs/releases/v0.1.1.md"
+Changelog = "https://github.com/oceanusXXD/code2skill/blob/main/docs/releases/v0.1.4.md"
 
 [project.optional-dependencies]
 dev = [
