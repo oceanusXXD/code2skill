@@ -2,10 +2,18 @@ from __future__ import annotations
 
 import argparse
 import os
+import sys
 from pathlib import Path
 from typing import Sequence
 
 from . import __version__
+
+
+USER_FACING_EXCEPTIONS = (
+    FileNotFoundError,
+    RuntimeError,
+    ValueError,
+)
 
 
 class HelpFormatter(
@@ -19,13 +27,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="code2skill",
         description=(
-            "把 Python 仓库编译为可供 AI 编程助手消费的结构化项目知识与 Skill 文档。"
+            "Generate repository-aware Skills, structured project knowledge, "
+            "and AI rule files from real Python codebases."
         ),
         epilog=(
-            "示例:\n"
-            "  code2skill scan --llm qwen --model qwen-plus-latest\n"
-            "  code2skill ci --mode auto --base-ref origin/main --llm qwen\n"
-            "  code2skill adapt --target codex"
+            "Examples:\n"
+            "  code2skill scan /path/to/repo --llm qwen --model qwen-plus-latest\n"
+            "  code2skill ci /path/to/repo --mode auto --base-ref origin/main --llm qwen\n"
+            "  code2skill adapt /path/to/repo --target codex"
         ),
         formatter_class=HelpFormatter,
     )
@@ -38,8 +47,8 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_parser = subparsers.add_parser(
         "scan",
-        help="全量生成项目蓝图、Skill 规划和 Skill 文档。",
-        description="执行完整扫描流程，默认从当前目录读取仓库。",
+        help="Run a full repository scan and generate Skills.",
+        description="Scan a repository and write the full code2skill artifact set.",
         formatter_class=HelpFormatter,
     )
     _add_common_arguments(scan_parser)
@@ -48,13 +57,13 @@ def build_parser() -> argparse.ArgumentParser:
         "--mode",
         choices=("full", "incremental"),
         default="full",
-        help="scan 命令默认走 full，也允许显式测试 incremental。",
+        help="Execution mode for the scan command.",
     )
 
     estimate_parser = subparsers.add_parser(
         "estimate",
-        help="只计算影响范围和成本，不写出中间产物。",
-        description="用于在 CI 或本地预估扫描成本，不触发写盘。",
+        help="Preview impact and cost without generating Skills.",
+        description="Estimate scan impact and cost, then write report.json only.",
         formatter_class=HelpFormatter,
     )
     _add_common_arguments(estimate_parser)
@@ -62,8 +71,11 @@ def build_parser() -> argparse.ArgumentParser:
 
     ci_parser = subparsers.add_parser(
         "ci",
-        help="CI/CD 统一入口，支持 auto/full/incremental。",
-        description="优先用于自动化场景，会根据历史状态和 diff 自动选择模式。",
+        help="Run the automation-friendly full or incremental pipeline.",
+        description=(
+            "Use repository state and diffs to choose full or incremental mode "
+            "for CI/CD workflows."
+        ),
         formatter_class=HelpFormatter,
     )
     _add_common_arguments(ci_parser)
@@ -72,20 +84,29 @@ def build_parser() -> argparse.ArgumentParser:
 
     adapt_parser = subparsers.add_parser(
         "adapt",
-        help="把生成后的 Skill 适配到 Cursor、Codex、Claude 等目标位置。",
-        description="纯文件操作，不调用 LLM。",
+        help="Adapt generated Skills into target AI tool instruction files.",
+        description=(
+            "Copy or merge generated Skills into target-specific files under "
+            "the repository root."
+        ),
         formatter_class=HelpFormatter,
+    )
+    adapt_parser.add_argument(
+        "repo_path",
+        nargs="?",
+        default=".",
+        help="Repository root where adapted files should be written.",
     )
     adapt_parser.add_argument(
         "--target",
         choices=("cursor", "claude", "codex", "copilot", "windsurf", "all"),
         required=True,
-        help="目标 IDE 或规则文件格式。",
+        help="Target IDE or instruction-file format.",
     )
     adapt_parser.add_argument(
         "--source-dir",
         default=_env_str("CODE2SKILL_SOURCE_DIR", ".code2skill/skills"),
-        help="Skill 目录，支持通过 CODE2SKILL_SOURCE_DIR 预设。",
+        help="Generated skills directory. Relative paths are resolved from repo_path.",
     )
 
     return parser
@@ -93,18 +114,36 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
-    args = parser.parse_args(argv)
+    try:
+        args = parser.parse_args(argv)
+        return _run_command(parser, args)
+    except KeyboardInterrupt:
+        _print_stderr("code2skill: interrupted\n")
+        return 130
+    except USER_FACING_EXCEPTIONS as exc:
+        _print_stderr(f"code2skill: error: {exc}\n")
+        return 1
 
+
+def _run_command(
+    parser: argparse.ArgumentParser,
+    args: argparse.Namespace,
+) -> int:
     if args.command == "adapt":
         from .adapt import adapt_skills
 
+        repo_path = Path(args.repo_path).expanduser().resolve()
+        source_dir = _resolve_repo_relative_path(repo_path, args.source_dir)
         written_files = adapt_skills(
             target=args.target,
-            source_dir=args.source_dir,
+            source_dir=source_dir,
+            destination_root=repo_path,
         )
         print(f"code2skill {__version__}")
         print("command: adapt")
+        print(f"repo: {repo_path}")
         print(f"target: {args.target}")
+        print(f"source_dir: {source_dir}")
         for artifact in written_files:
             print(f"wrote: {artifact}")
         return 0
@@ -153,30 +192,30 @@ def _add_common_arguments(parser: argparse.ArgumentParser) -> None:
         "repo_path",
         nargs="?",
         default=".",
-        help="要分析的仓库路径，默认当前目录。",
+        help="Repository path to analyze.",
     )
     parser.add_argument(
         "--output-dir",
         default=_env_str("CODE2SKILL_OUTPUT_DIR", ".code2skill"),
-        help="输出目录，可通过 CODE2SKILL_OUTPUT_DIR 预设。",
+        help="Output directory for generated artifacts.",
     )
     parser.add_argument(
         "--max-files",
         type=int,
         default=_env_int("CODE2SKILL_MAX_FILES", 40),
-        help="预算内最多保留多少个高价值文件。",
+        help="Maximum number of high-value files to retain in the working set.",
     )
     parser.add_argument(
         "--max-file-size-kb",
         type=int,
         default=_env_int("CODE2SKILL_MAX_FILE_SIZE_KB", 256),
-        help="单个文本文件允许内联读取的最大体积。",
+        help="Maximum inline size for a single text file.",
     )
     parser.add_argument(
         "--max-total-chars",
         type=int,
         default=_env_int("CODE2SKILL_MAX_TOTAL_CHARS", 120000),
-        help="整个扫描流程允许保留的总字符预算。",
+        help="Total retained character budget for one run.",
     )
 
 
@@ -187,39 +226,43 @@ def _add_runtime_arguments(
     parser.add_argument(
         "--mode",
         choices=("auto", "full", "incremental"),
-        default=_env_choice("CODE2SKILL_MODE", default_mode, ("auto", "full", "incremental")),
-        help="运行模式，可通过 CODE2SKILL_MODE 预设。",
+        default=_env_choice(
+            "CODE2SKILL_MODE",
+            default_mode,
+            ("auto", "full", "incremental"),
+        ),
+        help="Execution mode for report-only or CI workflows.",
     )
     parser.add_argument(
         "--base-ref",
         default=_env_optional("CODE2SKILL_BASE_REF"),
-        help="CI diff 使用的基线引用，例如 origin/main。",
+        help="Base Git ref used for diffing, such as origin/main.",
     )
     parser.add_argument(
         "--head-ref",
         default=_env_str("CODE2SKILL_HEAD_REF", "HEAD"),
-        help="CI diff 使用的目标引用。",
+        help="Head Git ref used for diffing.",
     )
     parser.add_argument(
         "--diff-file",
         default=_env_optional("CODE2SKILL_DIFF_FILE"),
-        help="可选的 unified diff 文件路径，提供后优先读取。",
+        help="Optional unified diff file. When provided, it is used before Git refs.",
     )
     parser.add_argument(
         "--report-json",
         default=_env_optional("CODE2SKILL_REPORT_JSON"),
-        help="报告输出路径，默认为 output-dir/report.json。",
+        help="Optional report path. Defaults to output-dir/report.json.",
     )
     parser.add_argument(
         "--pricing-file",
         default=_env_optional("CODE2SKILL_PRICING_FILE"),
-        help="可选的价格配置 JSON，用于估算模型成本。",
+        help="Optional pricing JSON used for cost estimation.",
     )
     parser.add_argument(
         "--max-incremental-changed-files",
         type=int,
         default=_env_int("CODE2SKILL_MAX_INCREMENTAL_CHANGED_FILES", 64),
-        help="超过这个阈值时，auto 模式自动回退为 full。",
+        help="Fallback to full mode when the changed file count exceeds this limit.",
     )
 
 
@@ -231,80 +274,64 @@ def _add_skill_arguments(
         parser.add_argument(
             "--structure-only",
             action="store_true",
-            help="只运行 Phase 1 结构扫描。",
+            help="Run Phase 1 structure analysis only.",
         )
     parser.add_argument(
         "--llm",
         choices=("openai", "claude", "qwen"),
         default=_env_choice("CODE2SKILL_LLM", "openai", ("openai", "claude", "qwen")),
-        help="LLM 后端，可通过 CODE2SKILL_LLM 预设。",
+        help="LLM provider used for planning and Skill generation.",
     )
     parser.add_argument(
         "--model",
         default=_env_optional("CODE2SKILL_MODEL"),
-        help="可选的模型名，可通过 CODE2SKILL_MODEL 预设。",
+        help="Optional model name for the selected provider.",
     )
     parser.add_argument(
         "--max-skills",
         type=int,
         default=_env_int("CODE2SKILL_MAX_SKILLS", 8),
-        help="最多生成多少个 Skill，可通过 CODE2SKILL_MAX_SKILLS 预设。",
+        help="Maximum number of generated Skills.",
     )
 
 
 def _build_config(args):
-    from .config import PricingConfig, RunOptions, ScanConfig, ScanLimits
+    from .api import create_scan_config
 
-    repo_path = Path(args.repo_path).expanduser().resolve()
-    output_dir = Path(args.output_dir)
-    if not output_dir.is_absolute():
-        output_dir = repo_path / output_dir
-
-    pricing_path = (
-        Path(args.pricing_file).expanduser().resolve()
-        if getattr(args, "pricing_file", None)
-        else None
-    )
-    report_path = (
-        Path(args.report_json).expanduser().resolve()
-        if getattr(args, "report_json", None)
-        else output_dir / "report.json"
-    )
-    diff_path = (
-        Path(args.diff_file).expanduser().resolve()
-        if getattr(args, "diff_file", None)
-        else None
-    )
-
-    return ScanConfig(
-        repo_path=repo_path,
-        output_dir=output_dir,
-        limits=ScanLimits(
-            max_files=args.max_files,
-            max_file_size_kb=args.max_file_size_kb,
-            max_total_chars=args.max_total_chars,
-        ),
-        run=RunOptions(
-            command=args.command,
-            mode=args.mode,
-            base_ref=getattr(args, "base_ref", None),
-            head_ref=getattr(args, "head_ref", "HEAD"),
-            diff_file=diff_path,
-            report_path=report_path,
-            pricing=PricingConfig.from_file(pricing_path),
-            structure_only=getattr(args, "structure_only", False),
-            llm_provider=getattr(args, "llm", "openai"),
-            llm_model=getattr(args, "model", None),
-            max_skills=getattr(args, "max_skills", 8),
-            write_outputs=args.command != "estimate",
-            write_state=args.command != "estimate",
-            max_incremental_changed_files=getattr(
-                args,
-                "max_incremental_changed_files",
-                64,
-            ),
+    return create_scan_config(
+        repo_path=args.repo_path,
+        command=args.command,
+        output_dir=args.output_dir,
+        mode=args.mode,
+        base_ref=getattr(args, "base_ref", None),
+        head_ref=getattr(args, "head_ref", "HEAD"),
+        diff_file=getattr(args, "diff_file", None),
+        report_path=getattr(args, "report_json", None),
+        pricing_file=getattr(args, "pricing_file", None),
+        structure_only=getattr(args, "structure_only", False),
+        llm_provider=getattr(args, "llm", "openai"),
+        llm_model=getattr(args, "model", None),
+        max_skills=getattr(args, "max_skills", 8),
+        max_files=args.max_files,
+        max_file_size_kb=args.max_file_size_kb,
+        max_total_chars=args.max_total_chars,
+        max_incremental_changed_files=getattr(
+            args,
+            "max_incremental_changed_files",
+            64,
         ),
     )
+
+
+def _resolve_repo_relative_path(repo_path: Path, value: str) -> Path:
+    path = Path(value).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (repo_path / path).resolve()
+
+
+def _print_stderr(message: str) -> None:
+    print(message, file=sys.stderr, end="")
 
 
 def _env_choice(name: str, default: str, choices: tuple[str, ...]) -> str:

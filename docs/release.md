@@ -1,0 +1,63 @@
+# Release Guide
+
+This repository ships both a CLI and a Python package.
+
+This guide is safe to use as a local release rehearsal for a test version. It does not assume that tagging, GitHub Release creation, or PyPI publishing must happen in the current working tree.
+
+## Pre-Release Checks
+
+Run the local validation gates before tagging a release:
+
+```bash
+python -m pytest -q
+python -m build
+python -m twine check dist/*
+```
+
+## Test-Version Rehearsal
+
+If you are only validating a test build locally:
+
+1. keep the repository on an unreleased working branch
+2. run the validation gates
+3. inspect the generated files in `dist/`
+4. install the wheel in an isolated environment
+5. do not tag or upload anything yet
+
+When doing repeated rehearsals, remove old `dist/` contents first so you do not accidentally validate or upload stale artifacts from another version.
+
+Optional clean-install smoke check:
+
+```bash
+python -m venv .venv-smoke
+. .venv-smoke/bin/activate
+pip install dist/code2skill-*.whl
+code2skill --help
+python -m code2skill --version
+```
+
+## Version Update
+
+When cutting a new release:
+
+1. Update `version` in `pyproject.toml`
+2. Update `__version__` in `src/code2skill/__init__.py`
+3. Add a new note in `docs/releases/`
+4. Update `CHANGELOG.md`
+
+For a test-version rehearsal, you can skip this section and keep the current version unchanged.
+
+## GitHub Actions
+
+This repository includes:
+
+- `.github/workflows/ci.yml`: unit tests plus package build and install smoke check
+- `.github/workflows/release.yml`: build, `twine check`, and PyPI publish on version tags
+
+The release workflow expects PyPI publishing to be configured for trusted publishing or equivalent repository credentials.
+
+## Manual Release Safety Notes
+
+- do not use `twine upload dist/*` if `dist/` contains artifacts from multiple versions
+- upload only the exact wheel and sdist for the intended version
+- tag and publish only from a clean `git status`

@@ -4,11 +4,13 @@ __pycache__/
 .pytest_cache/
 .venv/
 venv/
+.venv-smoke/
 # Generated analysis and Skill outputs.
 .code2skill/
 .code2skill-*/
 # Local release/smoke environments.
 .pypi-smoke/
 .pypi-smoke-out/
+.release-smoke/
 build/
 dist/

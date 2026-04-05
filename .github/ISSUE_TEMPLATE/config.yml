@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions
+    url: https://github.com/oceanusXXD/code2skill/discussions
+    about: Ask workflow or adoption questions in Discussions when available.

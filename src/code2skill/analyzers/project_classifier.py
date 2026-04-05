@@ -10,7 +10,7 @@ from ..models import (
     ProjectProfile,
     SourceFileSummary,
 )
-from ..scanner.detector import MONOREPO_FILES, infer_role_domain
+from ..scanner.detector import infer_role_domain
 
 
 class ProjectClassifier:
@@ -51,20 +51,16 @@ class ProjectClassifier:
             for candidate in inventory_files
             if candidate.relative_path.parts
         }
-        config_names = {summary.path.split("/")[-1] for summary in config_summaries}
-        monorepo = bool(top_level_names & {"apps", "packages", "services"}) or bool(
-            config_names & MONOREPO_FILES
-        )
+        monorepo = bool(top_level_names & {"apps", "packages", "services"})
 
         backend_score = self._score_backend(framework_signals, source_summaries, top_level_names)
-        infra_score = self._score_infra(config_summaries, source_summaries, top_level_names)
 
         if monorepo:
             repo_type = "monorepo"
         elif backend_score > 0:
             repo_type = "backend"
         else:
-            repo_type = "infra_lib" if infra_score >= 1 else "infra_lib"
+            repo_type = "infra_lib"
 
         package_topology = "workspace" if monorepo else "single-package"
         evidence = sorted(
@@ -145,17 +141,4 @@ class ProjectClassifier:
         )
         if top_level_names & {"api", "backend", "server"}:
             score += 2
-        return score
-
-    @staticmethod
-    def _score_infra(
-        config_summaries: list[ConfigSummary],
-        source_summaries: list[SourceFileSummary],
-        top_level_names: set[str],
-    ) -> int:
-        """基础设施或工具仓库倾向打分。"""
-
-        score = sum(1 for summary in config_summaries if summary.kind in {"docker", "workspace"})
-        score += 1 if top_level_names & {"infra", ".github"} else 0
-        score += 1 if not source_summaries else 0
         return score

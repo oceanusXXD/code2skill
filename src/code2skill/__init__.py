@@ -4,11 +4,27 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
+from .adapt import adapt_skills
+from .api import adapt_repository, create_scan_config, estimate, run_ci, scan
+from .config import PricingConfig, RunOptions, ScanConfig, ScanLimits
+from .models import ExecutionReport, ScanExecution
+
 __version__ = "0.1.4"
 
 __all__ = [
+    "adapt_repository",
+    "adapt_skills",
+    "create_scan_config",
+    "estimate",
+    "ExecutionReport",
+    "PricingConfig",
+    "RunOptions",
+    "ScanConfig",
     "ScanExecution",
+    "ScanLimits",
+    "run_ci",
     "scan_repository",
+    "scan",
     "estimate_repository",
     "run_ci_repository",
     "__version__",
@@ -16,14 +32,9 @@ __all__ = [
 
 if TYPE_CHECKING:
     from .core import estimate_repository, run_ci_repository, scan_repository
-    from .models import ScanExecution
 
 
 def __getattr__(name: str) -> Any:
-    if name == "ScanExecution":
-        from .models import ScanExecution
-
-        return ScanExecution
     if name in {"scan_repository", "estimate_repository", "run_ci_repository"}:
         from .core import estimate_repository, run_ci_repository, scan_repository
 

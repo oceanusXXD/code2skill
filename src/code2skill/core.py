@@ -65,7 +65,7 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
     repo_path = config.repo_path
     output_dir = config.output_dir
     git_client = GitClient(repo_path)
-    state_store = StateStore(output_dir)
+    state_store = StateStore(output_dir, repo_path=repo_path)
     previous_state = state_store.load()
     changed_diffs = _detect_changed_diffs(config, previous_state, git_client)
     changed_files = _changed_paths_from_diffs(

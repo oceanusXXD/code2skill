@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 
 from code2skill.analyzers.skill_blueprint_builder import SkillBlueprintBuilder
-from code2skill.llm_backend import MockBackend
 from code2skill.models import (
     ConfigSummary,
     DirectorySummary,
@@ -22,6 +21,7 @@ from code2skill.skill_generator import SkillGenerator
 from code2skill.core import _changed_paths_from_diffs, _prune_stale_skill_files
 from code2skill.models import FileDiffPatch
 from code2skill.skill_planner import SkillPlanner
+from tests.helpers import MockBackend
 
 
 def test_blueprint_builder_uses_nested_directories_and_core_module_evidence() -> None:

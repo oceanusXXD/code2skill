@@ -6,6 +6,15 @@
 
 English README. For Chinese documentation, see [README.zh-CN.md](./README.zh-CN.md).
 
+Additional docs:
+
+- [CLI Guide](./docs/cli.md)
+- [CI Guide](./docs/ci.md)
+- [Python API](./docs/python-api.md)
+- [Output Layout](./docs/output-layout.md)
+- [Release Guide](./docs/release.md)
+- [Changelog](./CHANGELOG.md)
+
 `code2skill` is a CLI for real Python repositories. It turns source code into structured project knowledge, Skill documents that AI coding assistants can consume directly, and rule files adapted for tools such as Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
 
 It provides a full chain from repository scanning and structural analysis to Skill generation and rule adaptation, with incremental updates based on diffs and historical state. The generated outputs are written to disk so they can be reviewed, committed, reused, and continuously integrated into local development and CI workflows.
@@ -252,6 +261,13 @@ Development install:
 pip install -e .[dev]
 ```
 
+Focused extras:
+
+```bash
+pip install -e .[test]
+pip install -e .[release]
+```
+
 CLI entrypoints:
 
 ```bash
@@ -259,7 +275,17 @@ code2skill --help
 python -m code2skill --help
 ```
 
-## Quick Start
+Top-level Python package shortcuts:
+
+```python
+from code2skill import adapt_repository, create_scan_config, estimate, run_ci, scan
+```
+
+These helpers live in `code2skill.api` and are re-exported from the package root as the supported high-level Python API.
+
+## Use As A CLI
+
+Set provider credentials first, then run the command against an explicit repository path.
 
 Bash:
 
@@ -268,8 +294,7 @@ export QWEN_API_KEY=...
 export CODE2SKILL_LLM=qwen
 export CODE2SKILL_MODEL=qwen-plus-latest
 
-cd /path/to/repo
-code2skill scan
+code2skill scan /path/to/repo
 ```
 
 PowerShell:
@@ -279,33 +304,71 @@ $env:QWEN_API_KEY="..."
 $env:CODE2SKILL_LLM="qwen"
 $env:CODE2SKILL_MODEL="qwen-plus-latest"
 
-Set-Location D:\path\to\repo
-code2skill scan
+code2skill scan D:\path\to\repo
 ```
 
 Structure-only scan:
 
 ```bash
-code2skill scan --structure-only
+code2skill scan /path/to/repo --structure-only
 ```
 
 Cost and impact preview:
 
 ```bash
-code2skill estimate
+code2skill estimate /path/to/repo
 ```
 
 Automatic incremental mode:
 
 ```bash
-code2skill ci --mode auto --base-ref origin/main
+code2skill ci /path/to/repo --mode auto --base-ref origin/main
 ```
 
 Adapt generated skills into Codex format:
 
 ```bash
-code2skill adapt --target codex --source-dir .code2skill/skills
+code2skill adapt /path/to/repo --target codex
 ```
+
+`adapt` writes target files under `repo_path`, and relative `--source-dir` values are resolved from that repository root. Relative `--output-dir`, `--report-json`, `--diff-file`, and `--pricing-file` values are also resolved from `repo_path`. The command fails fast if the source skills directory does not exist.
+
+## Use As A Python Package
+
+For simple automation, use the shortcut functions from `code2skill.api` (or the package-root re-exports) instead of manually building nested dataclasses:
+
+```python
+from pathlib import Path
+
+from code2skill import adapt_repository, estimate, scan
+
+repo = Path("/path/to/repo")
+
+preview = estimate(repo)
+result = scan(
+    repo,
+    output_dir=".code2skill",
+    llm_provider="qwen",
+    llm_model="qwen-plus-latest",
+    max_skills=6,
+)
+written = adapt_repository(repo, target="codex")
+
+print(preview.report_path)
+print(result.generated_skills)
+print(written)
+```
+
+For advanced control, use `create_scan_config` with `scan_repository`, `estimate_repository`, or `run_ci_repository`.
+
+Path semantics in the Python API:
+
+- `repo_path` is resolved first and treated as the repository root
+- relative `output_dir` values are resolved from `repo_path`
+- relative `report_path`, `diff_file`, and `pricing_file` values are resolved from `repo_path`
+- relative `source_dir` values passed to `adapt_repository(...)` are resolved from `repo_path`
+- when `report_path` is omitted, it defaults to `output_dir/report.json`
+- incremental state is reused only when the saved snapshot belongs to the same repository root
 
 ## LLM Backends
 
@@ -390,6 +453,7 @@ Common reasons to fall back to a full rebuild:
 - no previous `skill-plan.json`
 - important config changed, such as `pyproject.toml`
 - too many changed files for a safe incremental run
+- cached state was generated for a different repository root
 
 Recommended GitHub Actions workflow:
 
@@ -453,6 +517,7 @@ Notes:
 - Caching `.code2skill` is what enables fast incremental reuse.
 - The first CI run on a branch usually behaves like a full build because there is no prior state.
 - If you want a no-LLM CI sanity check, use `code2skill ci --mode auto --structure-only`.
+- This repository now includes checked-in workflows under `.github/workflows/` for CI and tagged releases.
 
 ## Output Layout
 

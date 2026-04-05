@@ -29,8 +29,13 @@ TARGETS = {
 }
 
 
-def adapt_skills(target: str, source_dir: Path | str = ".code2skill/skills") -> list[Path]:
-    source_path = Path(source_dir).expanduser().resolve()
+def adapt_skills(
+    target: str,
+    source_dir: Path | str = ".code2skill/skills",
+    destination_root: Path | str = ".",
+) -> list[Path]:
+    destination_root_path = Path(destination_root).expanduser().resolve()
+    source_path = _resolve_path(destination_root_path, source_dir)
     if not source_path.exists() or not source_path.is_dir():
         raise FileNotFoundError(f"Skill directory does not exist: {source_path}")
 
@@ -40,12 +45,19 @@ def adapt_skills(target: str, source_dir: Path | str = ".code2skill/skills") -> 
         if target_name not in TARGETS:
             raise ValueError(f"Unsupported target: {target_name}")
         target_config = TARGETS[target_name]
-        destination = (Path.cwd() / target_config["dest"]).resolve()
+        destination = (destination_root_path / target_config["dest"]).resolve()
         if target_config["mode"] == "copy":
             written.extend(_copy_skills(source_path, destination))
             continue
         written.append(_merge_skills(source_path, destination))
     return written
+
+
+def _resolve_path(root: Path, candidate: Path | str) -> Path:
+    path = Path(candidate).expanduser()
+    if path.is_absolute():
+        return path.resolve()
+    return (root / path).resolve()
 
 
 def _copy_skills(source_dir: Path, destination_dir: Path) -> list[Path]:
