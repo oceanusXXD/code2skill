@@ -53,9 +53,23 @@ This repository includes:
 
 - `.github/workflows/ci.yml`: unit tests plus package build and install smoke check
 - `.github/workflows/release.yml`: version validation, build, `twine check`, and GitHub Release creation on version tags
+- `.github/workflows/publish-pypi.yml`: manual PyPI publishing from a selected ref
 
 The checked-in release workflow is intentionally repository-focused. It does not publish to PyPI automatically.
-If you want package publishing later, treat that as a separate manual or dedicated workflow concern.
+PyPI publishing is handled separately through the manual `publish-pypi.yml` workflow.
+
+## Manual PyPI Publish
+
+Use `.github/workflows/publish-pypi.yml` only when you explicitly want to publish a built version to PyPI.
+
+Recommended flow:
+
+1. prepare and push the final release commit
+2. make sure the version in `pyproject.toml` and `src/code2skill/__init__.py` is final
+3. run the `Release` workflow via a version tag so GitHub Release creation succeeds
+4. manually run `Publish PyPI` from the same ref and provide the exact version string
+
+This keeps repository release automation and package publication separate.
 
 ## Manual Release Safety Notes
 

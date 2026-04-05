@@ -18,6 +18,7 @@ This repository includes checked-in workflows under `.github/workflows/`:
 
 - `ci.yml`: test matrix, build, metadata check, and install smoke test
 - `release.yml`: version validation, build, metadata check, and GitHub Release creation on version tags
+- `publish-pypi.yml`: manual PyPI publication workflow
 
 The README includes a sample consumer workflow for running `code2skill` inside another repository.
 

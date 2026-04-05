@@ -1,0 +1,61 @@
+name: Publish PyPI
+
+on:
+  workflow_dispatch:
+    inputs:
+      expected_version:
+        description: "Package version expected from the selected ref, for example 0.1.6"
+        required: true
+        type: string
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Upgrade pip
+        run: python -m pip install --upgrade pip
+
+      - name: Install release dependencies
+        run: python -m pip install -e .[release]
+
+      - name: Validate version
+        shell: bash
+        run: |
+          python - <<'PY'
+          import pathlib
+          import tomllib
+          import sys
+
+          root = pathlib.Path(".")
+          sys.path.insert(0, str(root / "src"))
+          from code2skill import __version__
+
+          expected = "${{ inputs.expected_version }}"
+          pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+          declared = pyproject["project"]["version"]
+          if declared != expected:
+              raise SystemExit(f"Expected version {expected}, but pyproject version is {declared}.")
+          if __version__ != expected:
+              raise SystemExit(f"Expected version {expected}, but runtime version is {__version__}.")
+          PY
+
+      - name: Build package
+        run: python -m build
+
+      - name: Check package metadata
+        run: python -m twine check dist/*
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
