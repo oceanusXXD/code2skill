@@ -56,6 +56,16 @@ This repository includes:
 
 The release workflow expects PyPI publishing to be configured for trusted publishing or equivalent repository credentials.
 
+For the checked-in GitHub Actions workflow, the trusted-publishing environment name is `pypi`.
+If PyPI does not have a matching trusted publisher for:
+
+- owner: `oceanusXXD`
+- repository: `code2skill`
+- workflow: `.github/workflows/release.yml`
+- environment: `pypi`
+
+then the `Publish to PyPI` step will fail even when build and metadata checks succeed.
+
 ## Manual Release Safety Notes
 
 - do not use `twine upload dist/*` if `dist/` contains artifacts from multiple versions
