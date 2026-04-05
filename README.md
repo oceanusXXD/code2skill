@@ -456,60 +456,7 @@ Common reasons to fall back to a full rebuild:
 - cached state was generated for a different repository root
 
 Recommended GitHub Actions workflow:
-
-```yaml
-name: code2skill
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-jobs:
-  build-skills:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Restore code2skill cache
-        uses: actions/cache@v4
-        with:
-          path: .code2skill
-          key: code2skill-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            code2skill-${{ runner.os }}-${{ github.ref_name }}-
-            code2skill-${{ runner.os }}-
-
-      - name: Install
-        run: pip install code2skill
-
-      - name: Run code2skill
-        env:
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          CODE2SKILL_LLM: qwen
-          CODE2SKILL_MODEL: qwen-plus-latest
-        run: |
-          code2skill ci \
-            --mode auto \
-            --base-ref origin/${{ github.base_ref || 'main' }} \
-            --head-ref HEAD
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: code2skill-output
-          path: .code2skill
-```
+See [CI Guide](./docs/ci.md) for a consumer workflow example and the checked-in repository workflows.
 
 Notes:
 
@@ -517,29 +464,11 @@ Notes:
 - Caching `.code2skill` is what enables fast incremental reuse.
 - The first CI run on a branch usually behaves like a full build because there is no prior state.
 - If you want a no-LLM CI sanity check, use `code2skill ci --mode auto --structure-only`.
-- This repository now includes checked-in workflows under `.github/workflows/` for CI and tagged releases.
+- This repository now includes checked-in workflows under `.github/workflows/` for CI, GitHub Releases, and manual PyPI publication.
 
 ## Output Layout
 
-Typical output:
-
-```text
-.code2skill/
-  project-summary.md
-  skill-blueprint.json
-  skill-plan.json
-  report.json
-  references/
-    architecture.md
-    code-style.md
-    workflows.md
-    api-usage.md
-  skills/
-    index.md
-    *.md
-  state/
-    analysis-state.json
-```
+See [Output Layout](./docs/output-layout.md) for the command-by-command artifact matrix and adapted target files.
 
 ## Typical Use Cases
 

@@ -455,60 +455,7 @@ code2skill estimate --pricing-file pricing.json
 - 缓存 state 记录的 `repo_root` 与当前仓库根目录不一致
 
 推荐的 GitHub Actions 配置：
-
-```yaml
-name: code2skill
-
-on:
-  pull_request:
-  push:
-    branches:
-      - main
-
-jobs:
-  build-skills:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Setup Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-
-      - name: Restore code2skill cache
-        uses: actions/cache@v4
-        with:
-          path: .code2skill
-          key: code2skill-${{ runner.os }}-${{ github.ref_name }}-${{ github.sha }}
-          restore-keys: |
-            code2skill-${{ runner.os }}-${{ github.ref_name }}-
-            code2skill-${{ runner.os }}-
-
-      - name: Install
-        run: pip install code2skill
-
-      - name: Run code2skill
-        env:
-          QWEN_API_KEY: ${{ secrets.QWEN_API_KEY }}
-          CODE2SKILL_LLM: qwen
-          CODE2SKILL_MODEL: qwen-plus-latest
-        run: |
-          code2skill ci \
-            --mode auto \
-            --base-ref origin/${{ github.base_ref || 'main' }} \
-            --head-ref HEAD
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: code2skill-output
-          path: .code2skill
-```
+完整示例见 [CI Guide](./docs/ci.md)。该文档同时说明了仓库内已提供的 workflow。
 
 说明：
 
@@ -516,29 +463,11 @@ jobs:
 - 缓存 `.code2skill` 是增量提速的关键
 - 一个分支上的第一次 CI 通常接近 `full`，因为还没有历史 state
 - 如果只想做不调用 LLM 的 CI 健康检查，可以运行 `code2skill ci --mode auto --structure-only`
-- 当前仓库已经提供 `.github/workflows/` 下的 CI 和 release workflow
+- 当前仓库已经提供 `.github/workflows/` 下的 CI、GitHub Release 和手动 PyPI 发布 workflow
 
 ## 输出目录
 
-典型输出如下：
-
-```text
-.code2skill/
-  project-summary.md
-  skill-blueprint.json
-  skill-plan.json
-  report.json
-  references/
-    architecture.md
-    code-style.md
-    workflows.md
-    api-usage.md
-  skills/
-    index.md
-    *.md
-  state/
-    analysis-state.json
-```
+按命令区分的产物矩阵和适配后文件位置见 [Output Layout](./docs/output-layout.md)。
 
 ## 典型场景
 
