@@ -5,13 +5,16 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 
 ## Unreleased
 
+## v0.1.5
+
+- Release notes: [docs/releases/v0.1.5.md](./docs/releases/v0.1.5.md)
+
+## v0.1.4
+
 - Added checked-in GitHub Actions workflows for CI and tagged releases.
 - Added dedicated CLI, Python API, output layout, and release guide documents.
 - Added package typing metadata via `py.typed`.
 - Split package extras into `test`, `release`, and `dev`.
-
-## v0.1.4
-
 - Release notes: [docs/releases/v0.1.4.md](./docs/releases/v0.1.4.md)
 
 ## v0.1.3
