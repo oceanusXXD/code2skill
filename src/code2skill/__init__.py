@@ -9,7 +9,7 @@ from .api import adapt_repository, create_scan_config, estimate, run_ci, scan
 from .config import PricingConfig, RunOptions, ScanConfig, ScanLimits
 from .models import ExecutionReport, ScanExecution
 
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 __all__ = [
     "adapt_repository",
