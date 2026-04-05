@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from ..config import ENTRYPOINT_BASENAMES, infer_language
+from ..config import infer_language
 
 FRAMEWORK_PACKAGE_MAP = {
     "fastapi": {"fastapi"},
@@ -10,9 +10,6 @@ FRAMEWORK_PACKAGE_MAP = {
     "django": {"django", "djangorestframework"},
     "pytest": {"pytest"},
 }
-
-MONOREPO_FILES: set[str] = set()
-
 
 def detect_language(path: Path) -> str | None:
     """按后缀识别当前文件属于哪种源码语言。"""
@@ -41,9 +38,3 @@ def infer_role_domain(role: str) -> str:
     if role in {"test"}:
         return "quality"
     return "shared"
-
-
-def looks_like_entrypoint(path: Path) -> bool:
-    """根据常见文件名判断是否像入口文件。"""
-
-    return path.name in ENTRYPOINT_BASENAMES

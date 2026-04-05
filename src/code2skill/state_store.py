@@ -23,48 +23,59 @@ from .models import (
 class StateStore:
     """负责 `.code2skill/state` 下状态文件的读写。"""
 
-    def __init__(self, output_dir: Path) -> None:
+    def __init__(self, output_dir: Path, repo_path: Path | None = None) -> None:
         self.output_dir = output_dir
+        self.repo_path = repo_path.resolve() if repo_path is not None else None
         self.state_dir = output_dir / STATE_DIRNAME
         self.state_path = self.state_dir / STATE_FILENAME
 
     def load(self) -> StateSnapshot | None:
-        """读取历史状态；不存在时返回 `None`。"""
+        """读取历史状态；不存在、损坏或仓库不匹配时返回 `None`。"""
 
         if not self.state_path.exists():
             return None
-        data = json.loads(self.state_path.read_text(encoding="utf-8"))
-        return StateSnapshot(
-            version=int(data["version"]),
-            generated_at=str(data["generated_at"]),
-            repo_root=str(data["repo_root"]),
-            head_commit=data.get("head_commit"),
-            selected_paths=list(data.get("selected_paths", [])),
-            directory_counts={
-                str(key): int(value)
-                for key, value in data.get("directory_counts", {}).items()
-            },
-            gitignore_patterns=list(data.get("gitignore_patterns", [])),
-            discovery_method=str(data.get("discovery_method", "filesystem")),
-            candidate_count=int(data.get("candidate_count", 0)),
-            total_chars=int(data.get("total_chars", 0)),
-            bytes_read=int(data.get("bytes_read", 0)),
-            files={
-                path: _cached_file_from_dict(path, payload)
-                for path, payload in data.get("files", {}).items()
-            },
-            reverse_dependencies={
-                str(key): list(value)
-                for key, value in data.get("reverse_dependencies", {}).items()
-            },
-            skill_index={
-                name: SkillImpactIndexEntry(**payload)
-                for name, payload in data.get("skill_index", {}).items()
-            },
-        )
+        try:
+            data = json.loads(self.state_path.read_text(encoding="utf-8"))
+            snapshot = StateSnapshot(
+                version=int(data["version"]),
+                generated_at=str(data["generated_at"]),
+                repo_root=str(data["repo_root"]),
+                head_commit=data.get("head_commit"),
+                selected_paths=list(data.get("selected_paths", [])),
+                directory_counts={
+                    str(key): int(value)
+                    for key, value in data.get("directory_counts", {}).items()
+                },
+                gitignore_patterns=list(data.get("gitignore_patterns", [])),
+                discovery_method=str(data.get("discovery_method", "filesystem")),
+                candidate_count=int(data.get("candidate_count", 0)),
+                total_chars=int(data.get("total_chars", 0)),
+                bytes_read=int(data.get("bytes_read", 0)),
+                files={
+                    path: _cached_file_from_dict(path, payload)
+                    for path, payload in data.get("files", {}).items()
+                },
+                reverse_dependencies={
+                    str(key): list(value)
+                    for key, value in data.get("reverse_dependencies", {}).items()
+                },
+                skill_index={
+                    name: SkillImpactIndexEntry(**payload)
+                    for name, payload in data.get("skill_index", {}).items()
+                },
+            )
+        except (KeyError, TypeError, ValueError, json.JSONDecodeError):
+            return None
+
+        # 增量缓存只能在同一个仓库根目录下复用，避免跨仓库误判。
+        if self.repo_path is not None:
+            snapshot_repo_root = Path(snapshot.repo_root).resolve()
+            if snapshot_repo_root != self.repo_path:
+                return None
+        return snapshot
 
     def save(self, snapshot: StateSnapshot) -> None:
-        """把新的状态快照写回磁盘。"""
+        """把新的状态快照写回磁盘，并尽量通过临时文件替换降低写坏风险。"""
 
         self.state_dir.mkdir(parents=True, exist_ok=True)
         payload = {
@@ -89,10 +100,13 @@ class StateStore:
                 for name, entry in snapshot.skill_index.items()
             },
         }
-        self.state_path.write_text(
+        # 先写临时文件，再替换正式文件，减少中断时留下半写入状态的概率。
+        tmp_path = self.state_path.with_suffix(f"{self.state_path.suffix}.tmp")
+        tmp_path.write_text(
             json.dumps(payload, indent=2, ensure_ascii=False),
             encoding="utf-8",
         )
+        tmp_path.replace(self.state_path)
 
 
 def _cached_file_to_dict(record: CachedFileRecord) -> dict[str, Any]:
