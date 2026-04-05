@@ -52,19 +52,10 @@ For a test-version rehearsal, you can skip this section and keep the current ver
 This repository includes:
 
 - `.github/workflows/ci.yml`: unit tests plus package build and install smoke check
-- `.github/workflows/release.yml`: build, `twine check`, and PyPI publish on version tags
+- `.github/workflows/release.yml`: version validation, build, `twine check`, and GitHub Release creation on version tags
 
-The release workflow expects PyPI publishing to be configured for trusted publishing or equivalent repository credentials.
-
-For the checked-in GitHub Actions workflow, the trusted-publishing environment name is `pypi`.
-If PyPI does not have a matching trusted publisher for:
-
-- owner: `oceanusXXD`
-- repository: `code2skill`
-- workflow: `.github/workflows/release.yml`
-- environment: `pypi`
-
-then the `Publish to PyPI` step will fail even when build and metadata checks succeed.
+The checked-in release workflow is intentionally repository-focused. It does not publish to PyPI automatically.
+If you want package publishing later, treat that as a separate manual or dedicated workflow concern.
 
 ## Manual Release Safety Notes
 

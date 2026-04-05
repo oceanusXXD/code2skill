@@ -17,7 +17,7 @@ Auto mode decides between full and incremental execution from:
 This repository includes checked-in workflows under `.github/workflows/`:
 
 - `ci.yml`: test matrix, build, metadata check, and install smoke test
-- `release.yml`: build, metadata check, and PyPI publish on version tags
+- `release.yml`: version validation, build, metadata check, and GitHub Release creation on version tags
 
 The README includes a sample consumer workflow for running `code2skill` inside another repository.
 

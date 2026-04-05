@@ -8,10 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    environment: pypi
     permissions:
       contents: write
-      id-token: write
 
     steps:
       - name: Checkout
@@ -58,9 +56,6 @@ jobs:
           if not release_note.exists():
               raise SystemExit(f"Missing release note file: {release_note}")
           PY
-
-      - name: Publish to PyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
