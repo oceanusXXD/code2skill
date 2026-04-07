@@ -41,7 +41,7 @@ python -m code2skill --version
 When cutting a new release:
 
 1. Update `version` in `pyproject.toml`
-2. Update `__version__` in `src/code2skill/__init__.py`
+2. Update `__version__` in `src/code2skill/version.py`
 3. Add a new note in `docs/releases/`
 4. Update `CHANGELOG.md`
 
@@ -65,7 +65,7 @@ Use `.github/workflows/publish-pypi.yml` only when you explicitly want to publis
 Recommended flow:
 
 1. prepare and push the final release commit
-2. make sure the version in `pyproject.toml` and `src/code2skill/__init__.py` is final
+2. make sure `src/code2skill/version.py` has the final version and `pyproject.toml` still points to the dynamic version source
 3. run the `Release` workflow via a version tag so GitHub Release creation succeeds
 4. manually run `Publish PyPI` from the same ref and provide the exact version string
 

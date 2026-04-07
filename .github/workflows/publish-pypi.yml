@@ -44,9 +44,12 @@ jobs:
 
           expected = "${{ inputs.expected_version }}"
           pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-          declared = pyproject["project"]["version"]
-          if declared != expected:
-              raise SystemExit(f"Expected version {expected}, but pyproject version is {declared}.")
+          dynamic = pyproject["project"].get("dynamic", [])
+          version_attr = pyproject["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+          if dynamic != ["version"]:
+              raise SystemExit(f"Expected dynamic version metadata, got {dynamic!r}.")
+          if version_attr != "code2skill.version.__version__":
+              raise SystemExit(f"Unexpected dynamic version source: {version_attr}.")
           if __version__ != expected:
               raise SystemExit(f"Expected version {expected}, but runtime version is {__version__}.")
           PY
