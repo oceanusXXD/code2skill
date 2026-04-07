@@ -2,6 +2,8 @@
 
 `code2skill` can be used as a Python package as well as a CLI.
 
+The Python API follows the same workflow-oriented product model as the CLI: build configuration around a repository root, run one of the repository workflows, then optionally adapt generated Skill artifacts into downstream tool formats.
+
 ## Supported High-Level API
 
 The supported high-level API is available from `code2skill.api` and re-exported from the package root:
@@ -10,13 +12,13 @@ The supported high-level API is available from `code2skill.api` and re-exported 
 from code2skill import adapt_repository, create_scan_config, estimate, run_ci, scan
 ```
 
-These helpers are intended for application code and automation scripts.
+These helpers are intended for application code and automation scripts. They are the recommended product-facing API.
 
 ## Shortcut Functions
 
 ### `scan(...)`
 
-Run the full repository pipeline and write the normal artifact set.
+Run the full repository workflow and write the normal artifact bundle.
 
 ### `estimate(...)`
 
@@ -74,10 +76,18 @@ The pipeline functions return `ScanExecution`, which includes:
 - `report_path`
 - `report`
 
-The lower-level config and report dataclasses are also exported from the package root:
+The lower-level config and report dataclasses are also exported from the package root. The package root also exports the new artifact and summary contracts used by the workflow-oriented surface:
 
 ```python
-from code2skill import PricingConfig, RunOptions, ScanConfig, ScanExecution, ScanLimits
+from code2skill import (
+    ArtifactLayout,
+    CommandRunSummary,
+    PricingConfig,
+    RunOptions,
+    ScanConfig,
+    ScanExecution,
+    ScanLimits,
+)
 ```
 
 ## Incremental-State Safety
