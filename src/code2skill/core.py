@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import importlib
 from collections import Counter
 from collections.abc import Sequence
 from dataclasses import replace
@@ -326,7 +327,7 @@ def _collect_records(
             candidate=candidate,
             cached=cached,
             changed_files=changed_files,
-        ):
+        ) and cached is not None:
             records[path_key] = replace(cached, selected=selected)
             continue
 
@@ -369,43 +370,15 @@ def _build_blueprint(
 ) -> SkillBlueprint:
     """把缓存记录重组成最终的 skill blueprint。"""
 
-    config_summaries = [
-        record.config_summary
-        for record in records.values()
-        if record.config_summary is not None
-    ]
-    source_summaries = [
-        record.source_summary
-        for path, record in records.items()
-        if path in selected_paths and record.source_summary is not None
-    ]
-    source_summaries = [item for item in source_summaries if item is not None]
-    config_summaries = [item for item in config_summaries if item is not None]
+    build_blueprint = importlib.import_module(
+        ".capabilities.blueprint_service", __package__
+    ).build_blueprint
 
-    classifier = ProjectClassifier()
-    inventory_candidates = [
-        _record_to_candidate(repo_path=repo_path, path=path, record=record)
-        for path, record in records.items()
-    ]
-    project_profile = classifier.classify(
+    return build_blueprint(
         repo_path=repo_path,
-        inventory_files=inventory_candidates,
-        config_summaries=config_summaries,
-        source_summaries=source_summaries,
-    )
-    domains = classifier.summarize_domains(source_summaries)
-    tech_stack = classifier.build_tech_stack(project_profile, config_summaries)
-    abstract_rules = RulesAnalyzer().analyze(source_summaries, config_summaries)
-    concrete_workflows = WorkflowAnalyzer().analyze(source_summaries)
-    return SkillBlueprintBuilder().build(
-        profile=project_profile,
-        tech_stack=tech_stack,
-        domains=domains,
-        directory_counts=inventory.directory_counts,
-        config_summaries=config_summaries,
-        source_summaries=source_summaries,
-        abstract_rules=abstract_rules,
-        concrete_workflows=concrete_workflows,
+        inventory=inventory,
+        selected_paths=selected_paths,
+        records=records,
         import_graph_stats=import_graph_stats,
     )
 
@@ -417,22 +390,11 @@ def _record_to_candidate(
 ) -> FileCandidate:
     """把缓存记录恢复成轻量候选对象，供分类阶段复用。"""
 
-    from .models import FileCandidate
+    record_to_candidate = importlib.import_module(
+        ".capabilities.blueprint_service", __package__
+    ).record_to_candidate
 
-    relative_path = Path(path)
-    return FileCandidate(
-        absolute_path=repo_path / relative_path,
-        relative_path=relative_path,
-        size_bytes=record.size_bytes,
-        char_count=record.char_count,
-        sha256=record.sha256,
-        language=record.language,
-        inferred_role=record.inferred_role,
-        priority=record.priority,
-        priority_reasons=record.priority_reasons,
-        content=None,
-        gitignored=record.gitignored,
-    )
+    return record_to_candidate(repo_path, path, record)
 
 
 def _record_from_candidate(
@@ -688,46 +650,22 @@ def _choose_effective_mode(
 ) -> tuple[str, list[str]]:
     """根据运行参数、git 状态和历史缓存选择 full 或 incremental。"""
 
-    notes: list[str] = []
-    requested_mode = config.run.mode
-    if requested_mode == "full":
-        return "full", notes
-    if config.run.diff_file is None and not git_client.is_repository():
-        notes.append("当前目录不是 git 仓库，自动回退到全量模式。")
-        return "full", notes
-    if previous_state is None:
-        notes.append("未发现历史状态缓存，自动执行首次全量构建。")
-        return "full", notes
-    if requested_mode == "incremental" and not changed_files:
-        notes.append("未检测到代码变化，将复用缓存并快速重建产物。")
-        return "incremental", notes
-    if requested_mode in {"incremental", "auto"}:
-        if (
-            config.run.force_full_on_config_change
-            and any(_is_full_rebuild_trigger(path) for path in changed_files)
-        ):
-            notes.append("检测到核心配置变化，自动回退到全量模式。")
-            return "full", notes
-        if len(changed_files) > config.run.max_incremental_changed_files:
-            notes.append("变更文件过多，自动回退到全量模式。")
-            return "full", notes
-        return "incremental", notes
-    return "full", notes
+    from .capabilities.execution_mode import choose_effective_mode
+
+    return choose_effective_mode(
+        config=config,
+        previous_state=previous_state,
+        git_client=git_client,
+        changed_files=changed_files,
+    )
 
 
 def _is_full_rebuild_trigger(path: str) -> bool:
     """判断某个变更是否足以触发整仓重编译。"""
 
-    relative_path = Path(path)
-    if relative_path.name in {
-        "pyproject.toml",
-        "requirements.txt",
-        "Dockerfile",
-    }:
-        return True
-    if matches_any_glob(relative_path, CONFIG_FILE_GLOBS):
-        return True
-    return relative_path.name in HIGH_VALUE_BASENAMES and len(relative_path.parts) == 1
+    from .capabilities.execution_mode import is_full_rebuild_trigger
+
+    return is_full_rebuild_trigger(path)
 
 
 def _resolve_affected_files(
@@ -826,86 +764,26 @@ def _build_skill_artifacts(
     affected_files: list[str],
     affected_skill_names: list[str],
 ) -> tuple[dict[str, str], list[str], list[str]]:
-    from .skill_generator import SkillGenerator, match_planned_skills
-    from .skill_planner import SkillPlanner, load_skill_plan, render_skill_plan
+    from .capabilities.generate_service import SkillPipelineService
 
-    backend = build_llm_backend(
-        provider=config.run.llm_provider,
-        model=config.run.llm_model,
-    )
-    planner = SkillPlanner(
-        backend=backend,
-        max_skills=config.run.max_skills,
-    )
-    generator = SkillGenerator(
-        backend=backend,
-        repo_path=repo_path,
-        output_dir=output_dir,
-        max_inline_chars=config.limits.max_file_size_kb * 1024,
-    )
-    plan_path = output_dir / "skill-plan.json"
-    needs_full_generation = (
-        config.run.command == "scan"
-        or effective_mode == "full"
-        or not plan_path.exists()
-    )
-
-    if needs_full_generation:
-        plan = planner.plan(blueprint=blueprint, repo_path=repo_path)
-        artifacts = {
-            "skill-plan.json": render_skill_plan(plan),
-        }
-        artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
-        planned_names = [skill.name for skill in plan.skills]
-        return artifacts, planned_names, planned_names
-
-    try:
-        plan = load_skill_plan(plan_path)
-    except Exception:
-        plan = planner.plan(blueprint=blueprint, repo_path=repo_path)
-        artifacts = {
-            "skill-plan.json": render_skill_plan(plan),
-        }
-        artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
-        planned_names = [skill.name for skill in plan.skills]
-        return artifacts, planned_names, planned_names
-
-    artifacts: dict[str, str] = {}
-    plan_skill_names = {skill.name for skill in plan.skills}
-    planned_names = [skill.name for skill in plan.skills]
-    present_skills = [
-        name for name in affected_skill_names
-        if name in plan_skill_names
-    ]
-    missing_skills = [
-        name for name in affected_skill_names
-        if name not in plan_skill_names
-    ]
-    if present_skills:
-        affected_skill_names = present_skills
-    elif missing_skills:
-        plan = planner.plan(blueprint=blueprint, repo_path=repo_path)
-        artifacts["skill-plan.json"] = render_skill_plan(plan)
-        plan_skill_names = {skill.name for skill in plan.skills}
-        planned_names = [skill.name for skill in plan.skills]
-        affected_skill_names = match_planned_skills(affected_files, plan)
-        artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
-        return artifacts, planned_names, planned_names
-
-    if not affected_skill_names:
-        return artifacts, [], planned_names
-
-    artifacts.update(
-        generator.generate_incremental(
-            blueprint=blueprint,
-            plan=plan,
-            affected_skill_names=affected_skill_names,
-            changed_files=changed_files,
-            changed_diffs=changed_diffs,
-            previous_state=previous_state,
+    service = SkillPipelineService(
+        backend_factory=lambda provider, model: build_llm_backend(
+            provider=provider,
+            model=model,
         )
     )
-    return artifacts, affected_skill_names, planned_names
+    return service.build_artifacts(
+        config=config,
+        effective_mode=effective_mode,
+        repo_path=repo_path,
+        output_dir=output_dir,
+        blueprint=blueprint,
+        previous_state=previous_state,
+        changed_files=changed_files,
+        changed_diffs=changed_diffs,
+        affected_files=affected_files,
+        affected_skill_names=affected_skill_names,
+    )
 
 
 def build_llm_backend(provider: str, model: str | None = None):
@@ -920,36 +798,23 @@ def _write_outputs(
 ) -> tuple[list[Path], list[Path]]:
     """把渲染结果写到磁盘，并区分“存在”和“实际更新”的文件。"""
 
-    written_files: list[Path] = []
-    updated_files: list[Path] = []
-    for relative_path, content in rendered_artifacts.items():
-        path = output_dir / relative_path
-        path.parent.mkdir(parents=True, exist_ok=True)
-        written_files.append(path)
-        if path.exists() and path.read_text(encoding="utf-8") == content:
-            continue
-        path.write_text(content, encoding="utf-8")
-        updated_files.append(path)
-    return written_files, updated_files
+    write_outputs = importlib.import_module(
+        ".capabilities.output_bundle_service", __package__
+    ).write_outputs
+
+    return write_outputs(output_dir, rendered_artifacts)
 
 
 def _prune_stale_skill_files(
     output_dir: Path,
     planned_skill_names: list[str],
 ) -> list[Path]:
-    skills_dir = output_dir / "skills"
-    if not skills_dir.exists():
-        return []
 
-    keep = {f"{name}.md" for name in planned_skill_names}
-    keep.add("index.md")
-    removed: list[Path] = []
-    for path in skills_dir.glob("*.md"):
-        if path.name in keep:
-            continue
-        path.unlink(missing_ok=True)
-        removed.append(path)
-    return removed
+    prune_stale_skill_files = importlib.import_module(
+        ".capabilities.output_bundle_service", __package__
+    ).prune_stale_skill_files
+
+    return prune_stale_skill_files(output_dir, planned_skill_names)
 
 
 def _build_report(
@@ -975,34 +840,29 @@ def _build_report(
 ) -> ExecutionReport:
     """把本次执行压缩成机器可读的报告对象。"""
 
-    return ExecutionReport(
-        generated_at=_now_iso(),
-        command=config.run.command,
-        requested_mode=config.run.mode,
+    from .capabilities.reporting import build_execution_report
+
+    return build_execution_report(
+        config=config,
         effective_mode=effective_mode,
-        repo_path=str(repo_path),
-        output_dir=str(output_dir),
-        base_ref=config.run.base_ref,
-        head_ref=config.run.head_ref,
+        repo_path=repo_path,
+        output_dir=output_dir,
+        inventory=inventory,
+        budget=budget,
+        changed_files=changed_files,
+        affected_files=affected_files,
+        affected_skills=affected_skills,
+        generated_skills=generated_skills,
+        written_files=written_files,
+        updated_files=updated_files,
         head_commit=head_commit,
-        discovery_method=inventory.discovery_method,
-        candidate_count=len(inventory.candidates),
-        selected_count=len(budget.selected),
-        total_chars=budget.total_chars,
         bytes_read=bytes_read,
-        written_files=[str(path) for path in written_files],
-        updated_files=[str(path) for path in updated_files],
-        impact=ImpactSummary(
-            changed_files=changed_files,
-            affected_files=affected_files,
-            affected_skills=affected_skills,
-            generated_skills=generated_skills,
-        ),
+        cost_estimator=cost_estimator,
         first_generation_cost=first_generation_cost,
-        incremental_rewrite_cost=rewrite_cost,
-        incremental_patch_cost=patch_cost,
-        pricing=cost_estimator.pricing_dict(),
+        rewrite_cost=rewrite_cost,
+        patch_cost=patch_cost,
         notes=notes,
+        generated_at=_now_iso(),
     )
 
 
@@ -1018,42 +878,39 @@ def _build_state_snapshot(
 ) -> StateSnapshot:
     """构建增量运行所需的状态快照。"""
 
-    return StateSnapshot(
-        version=1,
-        generated_at=_now_iso(),
-        repo_root=str(config.repo_path),
-        head_commit=head_commit,
-        selected_paths=[
-            candidate.relative_path.as_posix()
-            for candidate in budget.selected
-        ],
-        directory_counts=inventory.directory_counts,
-        gitignore_patterns=inventory.gitignore_patterns,
-        discovery_method=inventory.discovery_method,
-        candidate_count=len(inventory.candidates),
-        total_chars=budget.total_chars,
-        bytes_read=bytes_read,
-        files=records,
+    build_state_snapshot = importlib.import_module(
+        ".capabilities.state_snapshot_service", __package__
+    ).build_state_snapshot
+
+    return build_state_snapshot(
+        config=config,
+        inventory=inventory,
+        budget=budget,
+        records=records,
         reverse_dependencies=reverse_dependencies,
         skill_index=skill_index,
+        bytes_read=bytes_read,
+        head_commit=head_commit,
+        generated_at=_now_iso(),
     )
 
 
 def _resolve_report_path(config: ScanConfig) -> Path:
     """统一解析报告输出路径。"""
 
-    if config.run.report_path is not None:
-        return config.run.report_path
-    return config.output_dir / DEFAULT_REPORT_FILENAME
+    from .capabilities.reporting import resolve_report_path
+
+    return resolve_report_path(config)
 
 
 def _selected_path_strings(selected_candidates: Sequence[FileCandidate]) -> list[str]:
     """把入选候选文件转换成稳定的相对路径字符串。"""
 
-    return [
-        candidate.relative_path.as_posix()
-        for candidate in selected_candidates
-    ]
+    selected_path_strings = importlib.import_module(
+        ".capabilities.output_bundle_service", __package__
+    ).selected_path_strings
+
+    return selected_path_strings(selected_candidates)
 
 
 def _now_iso() -> str:
