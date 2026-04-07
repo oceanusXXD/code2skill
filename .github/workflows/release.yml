@@ -47,9 +47,12 @@ jobs:
           tag = "${{ github.ref_name }}"
           version = tag.removeprefix("v")
           pyproject = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
-          declared = pyproject["project"]["version"]
-          if declared != version:
-              raise SystemExit(f"Tag {tag} does not match pyproject version {declared}.")
+          dynamic = pyproject["project"].get("dynamic", [])
+          version_attr = pyproject["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+          if dynamic != ["version"]:
+              raise SystemExit(f"Expected dynamic version metadata, got {dynamic!r}.")
+          if version_attr != "code2skill.version.__version__":
+              raise SystemExit(f"Unexpected dynamic version source: {version_attr}.")
           if __version__ != version:
               raise SystemExit(f"Tag {tag} does not match runtime version {__version__}.")
           release_note = root / "docs" / "releases" / f"v{version}.md"

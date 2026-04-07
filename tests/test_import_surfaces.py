@@ -111,4 +111,9 @@ def test_package_includes_py_typed_marker() -> None:
 def test_runtime_version_matches_pyproject_metadata() -> None:
     pyproject = tomllib.loads((ROOT / "pyproject.toml").read_text(encoding="utf-8"))
 
-    assert pyproject["project"]["version"] == __version__
+    assert pyproject["project"]["dynamic"] == ["version"]
+    assert (
+        pyproject["tool"]["setuptools"]["dynamic"]["version"]["attr"]
+        == "code2skill.version.__version__"
+    )
+    assert __version__ == "0.1.7"
