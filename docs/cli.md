@@ -1,11 +1,15 @@
 # CLI Guide
 
-`code2skill` exposes four CLI commands:
+`code2skill` exposes four CLI commands.
 
-- `scan`: run a full repository scan and generate Skills plus supporting artifacts
-- `estimate`: calculate impact and cost, then write `report.json` only
-- `ci`: run the automation-oriented full or incremental pipeline
-- `adapt`: copy or merge generated Skills into target tool instruction files
+They form one repository-knowledge workflow:
+
+- `scan`: build the full analysis, planning, and generation artifact set
+- `estimate`: preview impact and cost without writing Skills or state
+- `ci`: run the automation-oriented workflow that can choose full or incremental execution
+- `adapt`: publish generated Skill artifacts into target tool instruction files
+
+This workflow model is intentional: the CLI now treats repository analysis, artifact generation, and target adaptation as linked stages of one product surface rather than unrelated commands.
 
 ## Entry Points
 
@@ -69,8 +73,11 @@ Successful `scan`, `estimate`, and `ci` commands print a compact summary includi
 - the command name
 - the effective mode
 - repository path
+- repository type
 - selected file counts
+- retained character volume
 - output directory
+- report path when available
 - generated artifact paths
 
 `adapt` prints the repository root, target, source directory, and written files.

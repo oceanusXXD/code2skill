@@ -65,6 +65,31 @@ For ongoing development workflows, it can combine historical state and code diff
 | `ci` | Yes, unless `--structure-only` | Yes | Automated full or incremental execution |
 | `adapt` | No | Yes | Copy or merge generated skills into tool-specific targets |
 
+## Workflow-Oriented Product Model
+
+The public surface now leans into one repository-knowledge workflow instead of four unrelated commands.
+
+In practical terms, users move through a predictable chain:
+
+1. choose a repository root and output layout
+2. run `scan` or `estimate` to build structural understanding or preview cost/impact
+3. use `ci` for automation-friendly full or incremental rebuilds
+4. use `adapt` to publish the generated Skill artifacts into target-specific instruction files
+
+This model is reflected both in the CLI and the Python API. Repository-relative path handling is shared, artifact layout is modeled explicitly, and command summaries now use one normalized result shape instead of each entrypoint formatting its own output ad hoc.
+
+## Current Internal Architecture
+
+The current codebase is still intentionally Python-first, but it now has clearer internal layers than the original single-orchestrator shape.
+
+- `application.py` acts as the application-facing facade for CLI and Python API entrypoints
+- `workflows/requests.py` centralizes repository-root-aware path and output resolution
+- `domain/` defines stable artifact and summary contracts such as `ArtifactLayout` and `CommandRunSummary`
+- `capabilities/adapt/` isolates target metadata for tool-specific output generation
+- `capabilities/generate_service.py` owns skill planner/generator coordination that previously lived directly inside `core.py`
+
+This is not the final architecture destination, but it is a meaningful step upward: the public surface is thinner, shared contracts are explicit, and the skill-generation hotspot has started moving out of the central orchestrator.
+
 ## What It Generates
 
 From one Python repository, `code2skill` can produce:
@@ -283,6 +308,14 @@ from code2skill import adapt_repository, create_scan_config, estimate, run_ci, s
 
 These helpers live in `code2skill.api` and are re-exported from the package root as the supported high-level Python API.
 
+Additional package-root contracts now include:
+
+```python
+from code2skill import ArtifactLayout, CommandRunSummary
+```
+
+These are useful when you want to work with artifact bundle locations or present normalized command summaries in your own automation.
+
 ## Use As A CLI
 
 Set provider credentials first, then run the command against an explicit repository path.
@@ -332,6 +365,8 @@ code2skill adapt /path/to/repo --target codex
 ```
 
 `adapt` writes target files under `repo_path`, and relative `--source-dir` values are resolved from that repository root. Relative `--output-dir`, `--report-json`, `--diff-file`, and `--pricing-file` values are also resolved from `repo_path`. The command fails fast if the source skills directory does not exist.
+
+Successful runs print a compact workflow summary. For generation-oriented commands this includes mode, repository type, selected file counts, retained character volume, output directory, report path when present, and written artifact paths.
 
 ## Use As A Python Package
 

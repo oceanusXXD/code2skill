@@ -64,6 +64,31 @@ Skill 可以表达例如以下信息：
 | `ci` | 会，除非加 `--structure-only` | 会 | 自动执行 full 或 incremental |
 | `adapt` | 不会 | 会 | 把生成后的 skills 复制或合并到目标工具格式 |
 
+## 工作流导向的产品模型
+
+现在的公共表面不再只是四个松散命令，而是一条更清晰的仓库知识工作流。
+
+在使用上，可以把它理解为：
+
+1. 先确定仓库根目录与产物输出位置
+2. 用 `scan` 或 `estimate` 建立结构理解，或预览成本与影响范围
+3. 用 `ci` 执行自动化场景下的 full / incremental 决策与重建
+4. 用 `adapt` 把生成后的 Skill 产物发布为目标工具需要的规则文件
+
+这个模型现在同时体现在 CLI 和 Python API 中：仓库相对路径语义被统一收口，产物布局由显式对象描述，命令输出也不再各自拼接，而是走一套标准化 summary 合同。
+
+## 当前内部架构
+
+当前版本仍然坚持 Python-first，但内部结构已经不再完全依赖单一大编排文件。
+
+- `application.py` 作为 CLI / Python API 的应用层门面
+- `workflows/requests.py` 统一仓库根目录感知的路径与输出解析规则
+- `domain/` 定义 `ArtifactLayout`、`CommandRunSummary` 等稳定合同
+- `capabilities/adapt/` 负责目标工具适配元数据
+- `capabilities/generate_service.py` 负责 Skill 规划与生成协调，这部分此前直接挤在 `core.py` 中
+
+这还不是最终形态，但已经是一次明确的架构上台阶：公共入口更薄、共享合同更显式、Skill 生成热点开始从中央 orchestrator 中拆出。
+
 ## 会生成什么
 
 针对一个 Python 仓库，`code2skill` 可以产出：
@@ -282,6 +307,14 @@ from code2skill import adapt_repository, create_scan_config, estimate, run_ci, s
 
 这些高层辅助函数定义在 `code2skill.api` 中，并从包根重新导出，作为当前推荐的 Python API 入口。
 
+包根现在还会导出两个与新工作流模型直接相关的合同：
+
+```python
+from code2skill import ArtifactLayout, CommandRunSummary
+```
+
+如果你想在自己的自动化里消费标准化产物布局，或者复用命令执行摘要，这两个对象会比较有用。
+
 ## 作为 CLI 使用
 
 先设置模型凭据，再把仓库路径显式传给命令。
@@ -331,6 +364,8 @@ code2skill adapt /path/to/repo --target codex
 ```
 
 `adapt` 会把目标文件写到 `repo_path` 下，且相对 `--source-dir` 会按仓库根目录解析。相对 `--output-dir`、`--report-json`、`--diff-file`、`--pricing-file` 也会按 `repo_path` 解析。如果源 skills 目录不存在，命令会直接报错，不会静默跳过。
+
+成功执行后，CLI 会输出一份紧凑摘要。对于生成型命令，这份摘要会包含运行模式、仓库类型、选中文件数、保留字符量、输出目录、可用时的报告路径，以及最终写出的产物路径。
 
 ## 作为 Python 包使用
 
