@@ -5,6 +5,10 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 
 ## Unreleased
 
+## v0.1.7
+
+- Release notes: [docs/releases/v0.1.7.md](./docs/releases/v0.1.7.md)
+
 ## v0.1.6
 
 - Release notes: [docs/releases/v0.1.6.md](./docs/releases/v0.1.6.md)
