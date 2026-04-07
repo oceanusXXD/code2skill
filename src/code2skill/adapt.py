@@ -4,30 +4,7 @@ import re
 import shutil
 from pathlib import Path
 
-
-TARGETS = {
-    "cursor": {
-        "mode": "copy",
-        "dest": ".cursor/rules/",
-    },
-    "claude": {
-        "mode": "merge",
-        "dest": "CLAUDE.md",
-    },
-    "codex": {
-        "mode": "merge",
-        "dest": "AGENTS.md",
-    },
-    "copilot": {
-        "mode": "merge",
-        "dest": ".github/copilot-instructions.md",
-    },
-    "windsurf": {
-        "mode": "merge",
-        "dest": ".windsurfrules",
-    },
-}
-
+from .capabilities.adapt.targets import get_target_definitions
 
 def adapt_skills(
     target: str,
@@ -39,14 +16,10 @@ def adapt_skills(
     if not source_path.exists() or not source_path.is_dir():
         raise FileNotFoundError(f"Skill directory does not exist: {source_path}")
 
-    targets = list(TARGETS) if target == "all" else [target]
     written: list[Path] = []
-    for target_name in targets:
-        if target_name not in TARGETS:
-            raise ValueError(f"Unsupported target: {target_name}")
-        target_config = TARGETS[target_name]
-        destination = (destination_root_path / target_config["dest"]).resolve()
-        if target_config["mode"] == "copy":
+    for target_definition in get_target_definitions(target):
+        destination = (destination_root_path / target_definition.destination).resolve()
+        if target_definition.mode == "copy":
             written.extend(_copy_skills(source_path, destination))
             continue
         written.append(_merge_skills(source_path, destination))

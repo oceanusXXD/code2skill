@@ -3,8 +3,11 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal
 
-from .adapt import adapt_skills
 from .config import PricingConfig, RunOptions, ScanConfig, ScanLimits
+from .workflows.requests import (
+    WorkflowRequest,
+    resolve_repo_relative_optional_path,
+)
 
 
 CommandName = Literal["scan", "estimate", "ci"]
@@ -35,12 +38,17 @@ def create_scan_config(
     max_incremental_changed_files: int = 64,
     force_full_on_config_change: bool = True,
 ) -> ScanConfig:
-    repo_root = Path(repo_path).expanduser().resolve()
-    output_root = _resolve_repo_relative_path(repo_root, output_dir)
+    request = WorkflowRequest.create(
+        command=command,
+        repo_path=repo_path,
+        output_dir=output_dir,
+    )
+    repo_root = request.repo_path
+    output_root = request.output_dir
     effective_mode = mode or ("full" if command == "scan" else "auto")
-    effective_report_path = _resolve_repo_relative_optional_path(repo_root, report_path)
+    effective_report_path = resolve_repo_relative_optional_path(repo_root, report_path)
     if effective_report_path is None:
-        effective_report_path = output_root / "report.json"
+        effective_report_path = request.artifact_layout.report_path
 
     return ScanConfig(
         repo_path=repo_root,
@@ -55,10 +63,10 @@ def create_scan_config(
             mode=effective_mode,
             base_ref=base_ref,
             head_ref=head_ref,
-            diff_file=_resolve_repo_relative_optional_path(repo_root, diff_file),
+            diff_file=resolve_repo_relative_optional_path(repo_root, diff_file),
             report_path=effective_report_path,
             pricing=PricingConfig.from_file(
-                _resolve_repo_relative_optional_path(repo_root, pricing_file)
+                resolve_repo_relative_optional_path(repo_root, pricing_file)
             ),
             structure_only=structure_only,
             llm_provider=llm_provider,
@@ -91,9 +99,9 @@ def scan(
     max_total_chars: int = 120000,
     max_incremental_changed_files: int = 64,
 ):
-    from .core import scan_repository
+    from .application import run_scan
 
-    return scan_repository(
+    return run_scan(
         create_scan_config(
             repo_path=repo_path,
             command="scan",
@@ -131,9 +139,9 @@ def estimate(
     max_total_chars: int = 120000,
     max_incremental_changed_files: int = 64,
 ):
-    from .core import estimate_repository
+    from .application import run_estimate
 
-    return estimate_repository(
+    return run_estimate(
         create_scan_config(
             repo_path=repo_path,
             command="estimate",
@@ -171,9 +179,9 @@ def run_ci(
     max_total_chars: int = 120000,
     max_incremental_changed_files: int = 64,
 ):
-    from .core import run_ci_repository
+    from .application import run_ci as run_ci_application
 
-    return run_ci_repository(
+    return run_ci_application(
         create_scan_config(
             repo_path=repo_path,
             command="ci",
@@ -202,25 +210,11 @@ def adapt_repository(
     target: str,
     source_dir: Path | str = ".code2skill/skills",
 ) -> list[Path]:
-    repo_root = Path(repo_path).expanduser().resolve()
-    return adapt_skills(
+    from .application import run_adapt
+
+    written_paths, _ = run_adapt(
+        repo_path=repo_path,
         target=target,
         source_dir=source_dir,
-        destination_root=repo_root,
     )
-
-
-def _resolve_repo_relative_path(repo_path: Path, value: Path | str) -> Path:
-    path = Path(value).expanduser()
-    if path.is_absolute():
-        return path.resolve()
-    return (repo_path / path).resolve()
-
-
-def _resolve_repo_relative_optional_path(
-    repo_path: Path,
-    value: Path | str | None,
-) -> Path | None:
-    if value is None:
-        return None
-    return _resolve_repo_relative_path(repo_path, value)
+    return written_paths

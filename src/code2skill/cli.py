@@ -3,10 +3,11 @@ from __future__ import annotations
 import argparse
 import os
 import sys
-from pathlib import Path
 from typing import Sequence
 
-from . import __version__
+from code2skill.version import __version__
+from .application import run_adapt, run_ci, run_estimate, run_scan, summarize_execution
+from .product.cli_summary import render_summary_lines
 
 
 USER_FACING_EXCEPTIONS = (
@@ -130,60 +131,27 @@ def _run_command(
     args: argparse.Namespace,
 ) -> int:
     if args.command == "adapt":
-        from .adapt import adapt_skills
-
-        repo_path = Path(args.repo_path).expanduser().resolve()
-        source_dir = _resolve_repo_relative_path(repo_path, args.source_dir)
-        written_files = adapt_skills(
+        written_files, summary = run_adapt(
+            repo_path=args.repo_path,
             target=args.target,
-            source_dir=source_dir,
-            destination_root=repo_path,
+            source_dir=args.source_dir,
         )
-        print(f"code2skill {__version__}")
-        print("command: adapt")
-        print(f"repo: {repo_path}")
-        print(f"target: {args.target}")
-        print(f"source_dir: {source_dir}")
-        for artifact in written_files:
-            print(f"wrote: {artifact}")
+        _print_command_summary(summary)
         return 0
 
     config = _build_config(args)
 
     if args.command == "scan":
-        from .core import scan_repository
-
-        result = scan_repository(config)
+        result = run_scan(config)
     elif args.command == "estimate":
-        from .core import estimate_repository
-
-        result = estimate_repository(config)
+        result = run_estimate(config)
     elif args.command == "ci":
-        from .core import run_ci_repository
-
-        result = run_ci_repository(config)
+        result = run_ci(config)
     else:
         parser.error(f"Unsupported command: {args.command}")
         return 2
 
-    print(f"code2skill {__version__}")
-    print(f"command: {args.command}")
-    print(f"mode: {result.run_mode}")
-    print(f"repo: {result.repo_path}")
-    print(f"repo_type: {result.blueprint.project_profile.repo_type}")
-    print(f"selected_files: {result.selected_count}/{result.candidate_count}")
-    print(f"total_chars: {result.total_chars}")
-    if result.changed_files:
-        print(f"changed_files: {len(result.changed_files)}")
-    if result.affected_skills:
-        print(f"affected_skills: {', '.join(result.affected_skills)}")
-    if result.generated_skills:
-        print(f"generated_skills: {', '.join(result.generated_skills)}")
-    print(f"output_dir: {result.output_dir}")
-    if result.report_path is not None:
-        print(f"report: {result.report_path}")
-    for artifact in result.output_files:
-        print(f"wrote: {artifact}")
+    _print_command_summary(summarize_execution(args.command, result))
     return 0
 
 
@@ -323,11 +291,10 @@ def _build_config(args):
     )
 
 
-def _resolve_repo_relative_path(repo_path: Path, value: str) -> Path:
-    path = Path(value).expanduser()
-    if path.is_absolute():
-        return path.resolve()
-    return (repo_path / path).resolve()
+def _print_command_summary(summary) -> None:
+    print(f"code2skill {__version__}")
+    for line in render_summary_lines(summary):
+        print(line)
 
 
 def _print_stderr(message: str) -> None:

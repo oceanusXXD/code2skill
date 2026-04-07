@@ -2,18 +2,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any
+import importlib
+from typing import Any
 
-from .adapt import adapt_skills
-from .api import adapt_repository, create_scan_config, estimate, run_ci, scan
-from .config import PricingConfig, RunOptions, ScanConfig, ScanLimits
-from .models import ExecutionReport, ScanExecution
-
-__version__ = "0.1.6"
+from code2skill.version import __version__
 
 __all__ = [
     "adapt_repository",
     "adapt_skills",
+    "ArtifactLayout",
+    "CommandRunSummary",
     "create_scan_config",
     "estimate",
     "ExecutionReport",
@@ -30,19 +28,35 @@ __all__ = [
     "__version__",
 ]
 
-if TYPE_CHECKING:
-    from .core import estimate_repository, run_ci_repository, scan_repository
-
+_LAZY_EXPORTS = {
+    "adapt_repository": (".api", "adapt_repository"),
+    "adapt_skills": (".adapt", "adapt_skills"),
+    "ArtifactLayout": (".domain", "ArtifactLayout"),
+    "CommandRunSummary": (".domain", "CommandRunSummary"),
+    "create_scan_config": (".api", "create_scan_config"),
+    "estimate": (".api", "estimate"),
+    "ExecutionReport": (".models", "ExecutionReport"),
+    "PricingConfig": (".config", "PricingConfig"),
+    "RunOptions": (".config", "RunOptions"),
+    "ScanConfig": (".config", "ScanConfig"),
+    "ScanExecution": (".models", "ScanExecution"),
+    "ScanLimits": (".config", "ScanLimits"),
+    "run_ci": (".api", "run_ci"),
+    "scan": (".api", "scan"),
+    "scan_repository": (".core", "scan_repository"),
+    "estimate_repository": (".core", "estimate_repository"),
+    "run_ci_repository": (".core", "run_ci_repository"),
+}
 
 def __getattr__(name: str) -> Any:
-    if name in {"scan_repository", "estimate_repository", "run_ci_repository"}:
-        from .core import estimate_repository, run_ci_repository, scan_repository
-
-        return {
-            "scan_repository": scan_repository,
-            "estimate_repository": estimate_repository,
-            "run_ci_repository": run_ci_repository,
-        }[name]
+    if name == "__version__":
+        return __version__
+    if name in _LAZY_EXPORTS:
+        module_name, attribute_name = _LAZY_EXPORTS[name]
+        module = importlib.import_module(module_name, __name__)
+        value = getattr(module, attribute_name)
+        globals()[name] = value
+        return value
     raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
 
 
