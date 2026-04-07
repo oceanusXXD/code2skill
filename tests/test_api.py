@@ -2,9 +2,18 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 from code2skill.capabilities.adapt.targets import get_target_definition
-from code2skill.api import adapt_repository, create_scan_config, estimate, run_ci, scan
+from code2skill.api import (
+    _create_scan_config_from_namespace,
+    _run_with_scan_config,
+    adapt_repository,
+    create_scan_config,
+    estimate,
+    run_ci,
+    scan,
+)
 
 
 def test_create_scan_config_builds_repo_relative_defaults(tmp_path: Path) -> None:
@@ -92,6 +101,68 @@ def test_create_scan_config_resolves_relative_optional_paths_from_repo_root(
     assert config.run.report_path == (repo_path / "reports" / "report.json").resolve()
     assert config.run.diff_file == (repo_path / "changes" / "current.diff").resolve()
     assert config.run.pricing is not None
+
+
+def test_create_scan_config_from_namespace_reads_cli_shape(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+    args = SimpleNamespace(
+        repo_path=str(repo_path),
+        command="ci",
+        output_dir=".generated",
+        mode="auto",
+        base_ref="origin/main",
+        head_ref="HEAD~1",
+        diff_file="changes.diff",
+        report_json="reports/report.json",
+        pricing_file=None,
+        structure_only=True,
+        llm="qwen",
+        model="qwen-plus-latest",
+        max_skills=3,
+        max_files=20,
+        max_file_size_kb=128,
+        max_total_chars=5000,
+        max_incremental_changed_files=10,
+    )
+
+    config = _create_scan_config_from_namespace(args)
+
+    assert config.repo_path == repo_path.resolve()
+    assert config.output_dir == (repo_path / ".generated").resolve()
+    assert config.run.base_ref == "origin/main"
+    assert config.run.head_ref == "HEAD~1"
+    assert config.run.diff_file == (repo_path / "changes.diff").resolve()
+    assert config.run.report_path == (repo_path / "reports" / "report.json").resolve()
+    assert config.run.structure_only is True
+    assert config.run.llm_provider == "qwen"
+
+
+def test_run_with_scan_config_builds_config_once(monkeypatch, tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+    sentinel = object()
+    captured: dict[str, object] = {}
+
+    def fake_runner(config):
+        captured["config"] = config
+        return sentinel
+
+    result = _run_with_scan_config(
+        runner=fake_runner,
+        repo_path=repo_path,
+        command="scan",
+        output_dir=".generated",
+        llm_provider="qwen",
+        llm_model="qwen-plus-latest",
+        max_skills=2,
+    )
+
+    assert result is sentinel
+    config = captured["config"]
+    assert config.run.command == "scan"
+    assert config.run.llm_provider == "qwen"
+    assert config.run.max_skills == 2
 
 
 def test_scan_shortcut_delegates_to_core_with_built_config(

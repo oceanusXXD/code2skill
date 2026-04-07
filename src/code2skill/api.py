@@ -80,6 +80,72 @@ def create_scan_config(
     )
 
 
+def _create_scan_config_from_namespace(args) -> ScanConfig:
+    return create_scan_config(
+        repo_path=args.repo_path,
+        command=args.command,
+        output_dir=args.output_dir,
+        mode=args.mode,
+        base_ref=getattr(args, "base_ref", None),
+        head_ref=getattr(args, "head_ref", "HEAD"),
+        diff_file=getattr(args, "diff_file", None),
+        report_path=getattr(args, "report_json", None),
+        pricing_file=getattr(args, "pricing_file", None),
+        structure_only=getattr(args, "structure_only", False),
+        llm_provider=getattr(args, "llm", "openai"),
+        llm_model=getattr(args, "model", None),
+        max_skills=getattr(args, "max_skills", 8),
+        max_files=args.max_files,
+        max_file_size_kb=args.max_file_size_kb,
+        max_total_chars=args.max_total_chars,
+        max_incremental_changed_files=getattr(args, "max_incremental_changed_files", 64),
+    )
+
+
+def _run_with_scan_config(
+    *,
+    runner,
+    repo_path: Path | str,
+    command: CommandName,
+    output_dir: Path | str = ".code2skill",
+    mode: ModeName | None = None,
+    base_ref: str | None = None,
+    head_ref: str = "HEAD",
+    diff_file: Path | str | None = None,
+    report_path: Path | str | None = None,
+    pricing_file: Path | str | None = None,
+    structure_only: bool = False,
+    llm_provider: LLMProvider = "openai",
+    llm_model: str | None = None,
+    max_skills: int = 8,
+    max_files: int = 40,
+    max_file_size_kb: int = 256,
+    max_total_chars: int = 120000,
+    max_incremental_changed_files: int = 64,
+):
+    return runner(
+        create_scan_config(
+            repo_path=repo_path,
+            command=command,
+            output_dir=output_dir,
+            mode=mode,
+            base_ref=base_ref,
+            head_ref=head_ref,
+            diff_file=diff_file,
+            report_path=report_path,
+            pricing_file=pricing_file,
+            structure_only=structure_only,
+            llm_provider=llm_provider,
+            llm_model=llm_model,
+            max_skills=max_skills,
+            max_files=max_files,
+            max_file_size_kb=max_file_size_kb,
+            max_total_chars=max_total_chars,
+            max_incremental_changed_files=max_incremental_changed_files,
+        )
+    )
+
+
 def scan(
     repo_path: Path | str = ".",
     *,
@@ -101,26 +167,25 @@ def scan(
 ):
     from .application import run_scan
 
-    return run_scan(
-        create_scan_config(
-            repo_path=repo_path,
-            command="scan",
-            output_dir=output_dir,
-            mode=mode,
-            base_ref=base_ref,
-            head_ref=head_ref,
-            diff_file=diff_file,
-            report_path=report_path,
-            pricing_file=pricing_file,
-            structure_only=structure_only,
-            llm_provider=llm_provider,
-            llm_model=llm_model,
-            max_skills=max_skills,
-            max_files=max_files,
-            max_file_size_kb=max_file_size_kb,
-            max_total_chars=max_total_chars,
-            max_incremental_changed_files=max_incremental_changed_files,
-        )
+    return _run_with_scan_config(
+        runner=run_scan,
+        repo_path=repo_path,
+        command="scan",
+        output_dir=output_dir,
+        mode=mode,
+        base_ref=base_ref,
+        head_ref=head_ref,
+        diff_file=diff_file,
+        report_path=report_path,
+        pricing_file=pricing_file,
+        structure_only=structure_only,
+        llm_provider=llm_provider,
+        llm_model=llm_model,
+        max_skills=max_skills,
+        max_files=max_files,
+        max_file_size_kb=max_file_size_kb,
+        max_total_chars=max_total_chars,
+        max_incremental_changed_files=max_incremental_changed_files,
     )
 
 
@@ -141,22 +206,21 @@ def estimate(
 ):
     from .application import run_estimate
 
-    return run_estimate(
-        create_scan_config(
-            repo_path=repo_path,
-            command="estimate",
-            output_dir=output_dir,
-            mode=mode,
-            base_ref=base_ref,
-            head_ref=head_ref,
-            diff_file=diff_file,
-            report_path=report_path,
-            pricing_file=pricing_file,
-            max_files=max_files,
-            max_file_size_kb=max_file_size_kb,
-            max_total_chars=max_total_chars,
-            max_incremental_changed_files=max_incremental_changed_files,
-        )
+    return _run_with_scan_config(
+        runner=run_estimate,
+        repo_path=repo_path,
+        command="estimate",
+        output_dir=output_dir,
+        mode=mode,
+        base_ref=base_ref,
+        head_ref=head_ref,
+        diff_file=diff_file,
+        report_path=report_path,
+        pricing_file=pricing_file,
+        max_files=max_files,
+        max_file_size_kb=max_file_size_kb,
+        max_total_chars=max_total_chars,
+        max_incremental_changed_files=max_incremental_changed_files,
     )
 
 
@@ -181,26 +245,25 @@ def run_ci(
 ):
     from .application import run_ci as run_ci_application
 
-    return run_ci_application(
-        create_scan_config(
-            repo_path=repo_path,
-            command="ci",
-            output_dir=output_dir,
-            mode=mode,
-            base_ref=base_ref,
-            head_ref=head_ref,
-            diff_file=diff_file,
-            report_path=report_path,
-            pricing_file=pricing_file,
-            structure_only=structure_only,
-            llm_provider=llm_provider,
-            llm_model=llm_model,
-            max_skills=max_skills,
-            max_files=max_files,
-            max_file_size_kb=max_file_size_kb,
-            max_total_chars=max_total_chars,
-            max_incremental_changed_files=max_incremental_changed_files,
-        )
+    return _run_with_scan_config(
+        runner=run_ci_application,
+        repo_path=repo_path,
+        command="ci",
+        output_dir=output_dir,
+        mode=mode,
+        base_ref=base_ref,
+        head_ref=head_ref,
+        diff_file=diff_file,
+        report_path=report_path,
+        pricing_file=pricing_file,
+        structure_only=structure_only,
+        llm_provider=llm_provider,
+        llm_model=llm_model,
+        max_skills=max_skills,
+        max_files=max_files,
+        max_file_size_kb=max_file_size_kb,
+        max_total_chars=max_total_chars,
+        max_incremental_changed_files=max_incremental_changed_files,
     )
 
 

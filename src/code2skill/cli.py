@@ -264,31 +264,9 @@ def _add_skill_arguments(
 
 
 def _build_config(args):
-    from .api import create_scan_config
+    from .api import _create_scan_config_from_namespace
 
-    return create_scan_config(
-        repo_path=args.repo_path,
-        command=args.command,
-        output_dir=args.output_dir,
-        mode=args.mode,
-        base_ref=getattr(args, "base_ref", None),
-        head_ref=getattr(args, "head_ref", "HEAD"),
-        diff_file=getattr(args, "diff_file", None),
-        report_path=getattr(args, "report_json", None),
-        pricing_file=getattr(args, "pricing_file", None),
-        structure_only=getattr(args, "structure_only", False),
-        llm_provider=getattr(args, "llm", "openai"),
-        llm_model=getattr(args, "model", None),
-        max_skills=getattr(args, "max_skills", 8),
-        max_files=args.max_files,
-        max_file_size_kb=args.max_file_size_kb,
-        max_total_chars=args.max_total_chars,
-        max_incremental_changed_files=getattr(
-            args,
-            "max_incremental_changed_files",
-            64,
-        ),
-    )
+    return _create_scan_config_from_namespace(args)
 
 
 def _print_command_summary(summary) -> None:
