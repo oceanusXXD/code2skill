@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from code2skill.capabilities.adapt.targets import get_target_definition
 from code2skill.api import adapt_repository, create_scan_config, estimate, run_ci, scan
 
 
@@ -227,3 +228,10 @@ def test_adapt_shortcut_resolves_relative_source_dir_from_repo_root(
     assert written == [(repo_path / "AGENTS.md").resolve()]
     assert (repo_path / "AGENTS.md").exists()
     assert not (tmp_path / "AGENTS.md").exists()
+
+
+def test_get_target_definition_for_codex_has_agents_output() -> None:
+    target = get_target_definition("codex")
+
+    assert target.name == "codex"
+    assert target.destination == "AGENTS.md"

@@ -186,3 +186,53 @@ def test_main_exits_130_on_keyboard_interrupt(
 
     assert exit_code == 130
     assert captured.err == "code2skill: interrupted\n"
+
+
+def test_run_command_prints_summary_with_application_result(monkeypatch, capsys, tmp_path: Path) -> None:
+    from code2skill.models import ScanExecution
+    from code2skill.models import SkillBlueprint, ProjectProfile, ImportGraphStats
+
+    blueprint = SkillBlueprint(
+        project_profile=ProjectProfile(
+            name="repo",
+            repo_type="library",
+            languages=["python"],
+            framework_signals=[],
+            package_topology="flat",
+            entrypoints=[],
+        ),
+        tech_stack={},
+        domains=[],
+        directory_summary=[],
+        key_configs=[],
+        core_modules=[],
+        important_apis=[],
+        abstract_rules=[],
+        concrete_workflows=[],
+        recommended_skills=[],
+        import_graph_stats=ImportGraphStats(
+            total_internal_edges=0,
+            hub_files=[],
+            entry_points=[],
+            cluster_count=0,
+        ),
+    )
+    result = ScanExecution(
+        repo_path=tmp_path,
+        output_dir=tmp_path / ".code2skill",
+        output_files=[tmp_path / ".code2skill" / "report.json"],
+        candidate_count=10,
+        selected_count=3,
+        total_chars=123,
+        blueprint=blueprint,
+    )
+    monkeypatch.setattr("code2skill.cli._build_config", lambda args: object())
+    monkeypatch.setattr("code2skill.cli.run_scan", lambda config: result)
+
+    exit_code = main(["scan"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 0
+    assert "command: scan" in captured.out
+    assert "repo_type: library" in captured.out
+    assert "wrote: " in captured.out
