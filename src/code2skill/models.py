@@ -325,6 +325,9 @@ class ExecutionReport:
     command: str
     requested_mode: str
     effective_mode: str
+    structure_only: bool
+    llm_provider: str
+    llm_model: str | None
     repo_path: str
     output_dir: str
     base_ref: str | None
