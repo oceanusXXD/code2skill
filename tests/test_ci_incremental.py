@@ -186,6 +186,10 @@ def test_run_ci_repository_uses_git_diff_for_incremental_skill_patch(
     assert "## 概述\n原有概述。" in updated_skill
     assert "<!-- UPDATED -->" in updated_skill
     assert "新规则：调用服务层时保持稳定返回值。" in updated_skill
+    assert result.report is not None
+    assert result.report.structure_only is False
+    assert result.report.llm_provider == "openai"
+    assert result.report.llm_model is None
 
 
 def _git(repo_path: Path, *args: str) -> str:

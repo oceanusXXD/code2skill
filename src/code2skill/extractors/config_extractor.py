@@ -1,9 +1,11 @@
 from __future__ import annotations
 
+import importlib
+
 try:
-    import tomllib
+    tomllib = importlib.import_module("tomllib")
 except ModuleNotFoundError:  # pragma: no cover - Python 3.10 fallback
-    import tomli as tomllib
+    tomllib = importlib.import_module("tomli")
 
 from ..models import ConfigSummary, FileCandidate
 from ..scanner.detector import detect_framework_signals
@@ -20,14 +22,8 @@ class ConfigExtractor:
             return self._extract_pyproject(candidate)
         if name == "requirements.txt":
             return self._extract_requirements(candidate)
-        if name.lower().startswith("readme"):
-            return ConfigSummary(
-                path=candidate.relative_path.as_posix(),
-                kind="documentation",
-                summary=_first_meaningful_line(candidate.content) or "Repository documentation.",
-            )
         if name.startswith("Dockerfile"):
-            entrypoints = _extract_docker_entrypoints(candidate.content)
+            entrypoints = _extract_docker_entrypoints(_candidate_text(candidate))
             return ConfigSummary(
                 path=candidate.relative_path.as_posix(),
                 kind="docker",
@@ -39,12 +35,14 @@ class ConfigExtractor:
     def _extract_pyproject(self, candidate: FileCandidate) -> ConfigSummary:
         """提取 Python 项目的依赖、入口和框架线索。"""
 
-        data = tomllib.loads(candidate.content)
-        project = data.get("project", {})
-        poetry = (data.get("tool") or {}).get("poetry", {})
-        dependencies = _normalize_python_dependencies(project.get("dependencies", []))
+        raw_data = tomllib.loads(_candidate_text(candidate))
+        data = _mapping_value(raw_data)
+        project = _mapping_value(data.get("project"))
+        tool_config = _mapping_value(data.get("tool"))
+        poetry = _mapping_value(tool_config.get("poetry"))
+        dependencies = _normalize_python_dependencies(project.get("dependencies"))
         poetry_dependencies = _normalize_python_dependencies(
-            list((poetry.get("dependencies") or {}).keys())
+            list(_mapping_value(poetry.get("dependencies")).keys())
         )
         framework_signals = detect_framework_signals(set(dependencies + poetry_dependencies))
         entrypoints = _extract_pyproject_entrypoints(project)
@@ -66,7 +64,7 @@ class ConfigExtractor:
     def _extract_requirements(self, candidate: FileCandidate) -> ConfigSummary:
         """提取 requirements.txt 中的框架信号。"""
 
-        dependencies = _normalize_python_dependencies(candidate.content.splitlines())
+        dependencies = _normalize_python_dependencies(_candidate_text(candidate).splitlines())
         framework_signals = detect_framework_signals(set(dependencies))
         summary = "Pinned Python dependencies."
         if framework_signals:
@@ -80,12 +78,22 @@ class ConfigExtractor:
         )
 
 
-def _normalize_python_dependencies(values: list[str]) -> list[str]:
+def _candidate_text(candidate: FileCandidate) -> str:
+    return candidate.content or ""
+
+
+def _mapping_value(value: object) -> dict[str, object]:
+    return value if isinstance(value, dict) else {}
+
+
+def _normalize_python_dependencies(values: object) -> list[str]:
     """把版本表达式归一化为纯包名，便于做框架识别。"""
 
+    if not isinstance(values, list):
+        return []
     dependencies: list[str] = []
     for value in values:
-        if not value:
+        if not isinstance(value, str) or not value:
             continue
         raw = value.strip()
         if not raw or raw.startswith("#") or raw.startswith("python"):
@@ -97,10 +105,10 @@ def _normalize_python_dependencies(values: list[str]) -> list[str]:
     return sorted(set(item for item in dependencies if item))
 
 
-def _extract_pyproject_entrypoints(project: dict) -> list[str]:
+def _extract_pyproject_entrypoints(project: dict[str, object]) -> list[str]:
     """从 pyproject 的 scripts 区块提取入口点。"""
 
-    scripts = project.get("scripts") or {}
+    scripts = _mapping_value(project.get("scripts"))
     return sorted(
         value for value in (_string_value(script_target) for script_target in scripts.values()) if value
     )
@@ -125,13 +133,3 @@ def _string_value(value: object) -> str:
     if isinstance(value, dict):
         return ""
     return str(value) if value is not None else ""
-
-
-def _first_meaningful_line(content: str) -> str:
-    """从 README 等文本中提取第一行有效摘要。"""
-
-    for line in content.splitlines():
-        stripped = line.strip().lstrip("#").strip()
-        if stripped:
-            return stripped
-    return ""
