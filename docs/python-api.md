@@ -76,6 +76,8 @@ The pipeline functions return `ScanExecution`, which includes:
 - `report_path`
 - `report`
 
+When state persistence is enabled, `output_files` includes the state snapshot path as part of the written intermediate artifact set.
+
 The embedded `ExecutionReport` also distinguishes between:
 
 - `final_product_files`: the generated Skill artifacts inside the bundle

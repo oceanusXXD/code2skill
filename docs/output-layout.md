@@ -39,6 +39,8 @@ Within this bundle, `code2skill` treats generated Skills as the final product la
 - `references/*.md`: supporting architectural and workflow references
 - `state/analysis-state.json`: incremental execution cache
 
+When `write_state` is enabled, both `report.json` accounting and `ScanExecution.output_files` include `state/analysis-state.json` in this intermediate layer.
+
 In product terms, `.code2skill/` is the workspace-local artifact bundle. The final repository-local product is the generated Skill set, while `adapt` publishes that Skill layer into the repository locations where each AI tool expects to read it.
 
 ## Adapted Outputs
