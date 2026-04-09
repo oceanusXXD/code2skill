@@ -34,6 +34,11 @@ def render_summary_lines(summary: CommandRunSummary) -> list[str]:
         lines.append(f"output_dir: {summary.output_dir}")
     if summary.report_path is not None:
         lines.append(f"report: {summary.report_path}")
+    if summary.final_product_paths:
+        lines.append(f"final_products: {len(summary.final_product_paths)}")
+        lines.extend(f"final_product: {path}" for path in summary.final_product_paths)
+    if summary.intermediate_artifact_paths:
+        lines.append(f"intermediate_artifacts: {len(summary.intermediate_artifact_paths)}")
     lines.extend(f"note: {note}" for note in summary.notes)
     lines.extend(f"updated: {path}" for path in summary.updated_paths)
     lines.extend(f"wrote: {path}" for path in summary.written_paths)

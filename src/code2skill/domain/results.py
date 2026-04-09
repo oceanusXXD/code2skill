@@ -29,6 +29,8 @@ class CommandRunSummary:
     generated_skills: list[str] = field(default_factory=list)
     report_path: Path | None = None
     notes: list[str] = field(default_factory=list)
+    final_product_paths: list[Path] = field(default_factory=list)
+    intermediate_artifact_paths: list[Path] = field(default_factory=list)
     updated_paths: list[Path] = field(default_factory=list)
     written_paths: list[Path] = field(default_factory=list)
 
@@ -52,6 +54,8 @@ def summarize_scan_execution(command: str, result: "ScanExecution") -> CommandRu
         generated_skills=list(result.generated_skills),
         report_path=result.report_path,
         notes=list(report.notes) if report is not None else [],
+        final_product_paths=[Path(path) for path in report.final_product_files] if report is not None else [],
+        intermediate_artifact_paths=[Path(path) for path in report.intermediate_artifact_files] if report is not None else [],
         updated_paths=[Path(path) for path in report.updated_files] if report is not None else [],
         written_paths=list(result.output_files),
     )
@@ -66,5 +70,6 @@ def summarize_adapt_result(
         repo_path=request.repo_path,
         target=request.target,
         source_dir=request.source_dir,
+        final_product_paths=list(written_paths),
         written_paths=list(written_paths),
     )
