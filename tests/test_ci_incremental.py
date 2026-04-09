@@ -190,6 +190,8 @@ def test_run_ci_repository_uses_git_diff_for_incremental_skill_patch(
     assert result.report.structure_only is False
     assert result.report.llm_provider == "openai"
     assert result.report.llm_model is None
+    assert str(output_dir / "state" / "analysis-state.json") in result.report.intermediate_artifact_files
+    assert output_dir / "state" / "analysis-state.json" in result.output_files
 
 
 def _git(repo_path: Path, *args: str) -> str:

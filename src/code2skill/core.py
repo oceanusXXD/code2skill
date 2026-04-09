@@ -201,6 +201,7 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
         effective_mode=effective_mode,
         repo_path=repo_path,
         output_dir=output_dir,
+        report_path=_resolve_report_path(config),
         inventory=inventory,
         budget=budget,
         changed_files=changed_files,
@@ -239,10 +240,14 @@ def execute_repository(config: ScanConfig) -> ScanExecution:
             )
         )
 
+    output_files = sorted({*written_files, report_path})
+    if config.run.write_state:
+        output_files.append(state_store.state_path)
+
     return ScanExecution(
         repo_path=repo_path,
         output_dir=output_dir,
-        output_files=sorted({*written_files, report_path}),
+        output_files=output_files,
         candidate_count=len(inventory.candidates),
         selected_count=len(budget.selected),
         total_chars=budget.total_chars,
@@ -822,6 +827,7 @@ def _build_report(
     effective_mode: str,
     repo_path: Path,
     output_dir: Path,
+    report_path: Path,
     inventory,
     budget,
     changed_files: list[str],
@@ -847,6 +853,7 @@ def _build_report(
         effective_mode=effective_mode,
         repo_path=repo_path,
         output_dir=output_dir,
+        report_path=report_path,
         inventory=inventory,
         budget=budget,
         changed_files=changed_files,
