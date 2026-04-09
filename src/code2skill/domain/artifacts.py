@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -49,3 +50,26 @@ class ArtifactLayout:
             state_dir=state_dir,
             state_path=state_dir / "analysis-state.json",
         )
+
+    def partition_bundle_paths(
+        self,
+        paths: Sequence[Path | str],
+    ) -> tuple[list[Path], list[Path]]:
+        final_products: list[Path] = []
+        intermediates: list[Path] = []
+        for path in paths:
+            resolved = self._resolve_bundle_path(path)
+            if self._is_final_product_path(resolved):
+                final_products.append(resolved)
+                continue
+            intermediates.append(resolved)
+        return final_products, intermediates
+
+    def _resolve_bundle_path(self, path: Path | str) -> Path:
+        candidate = Path(path).expanduser()
+        if candidate.is_absolute():
+            return candidate.resolve()
+        return (self.root / candidate).resolve()
+
+    def _is_final_product_path(self, path: Path) -> bool:
+        return path.suffix == ".md" and path.parent == self.skills_dir.resolve()
