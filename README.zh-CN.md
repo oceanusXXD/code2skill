@@ -105,6 +105,8 @@ Skill 可以表达例如以下信息：
   - `report.json`：执行指标、token 估算和影响摘要
   - `state/analysis-state.json`：供增量 CI 复用的状态快照
 
+当启用 state 写出时，`report.json` 和返回的 `ScanExecution.output_files` 都会把 `state/analysis-state.json` 记作中间工件，而不是最终 Skill 产物。
+
 ## Skill 在仓库中的角色
 
 Skill 是仓库知识面向 AI 的标准化表达层。

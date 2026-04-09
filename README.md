@@ -106,6 +106,8 @@ From one Python repository, `code2skill` can produce:
   - `report.json` for execution metrics, token estimates, and impact summaries
   - `state/analysis-state.json` for incremental CI reuse
 
+When state writing is enabled, both `report.json` and the returned `ScanExecution.output_files` account for `state/analysis-state.json` as an intermediate artifact rather than a final Skill product.
+
 ## The Role Of Skills In A Repository
 
 Skills are the standardized AI-facing expression layer of repository knowledge.
