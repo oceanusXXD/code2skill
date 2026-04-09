@@ -45,6 +45,8 @@ Skill 可以表达例如以下信息：
 
 它覆盖从仓库扫描、结构分析、Skill 规划、文档生成到工具规则适配的完整链路，也支持增量重建，让 Skill 能随着仓库演进保持同步。
 
+从产品语义上说，最终交付物是 Skill 层本身。`skills/` 下生成的 Skill 文档，以及通过 `adapt` 发布到目标工具位置的规则文件，才是最终产物；blueprint、plan、report、references、state 则是支撑审阅、调试和 CI 增量刷新的中间工件。
+
 对于一次性的本地分析，`code2skill` 可以扫描整个仓库并生成完整结果。对于持续开发场景，它可以结合历史 state 和代码 diff，只重建受影响的 Skill，降低重复生成成本，让 CI 内自动更新成为可行方案。
 
 ## 它保证什么
@@ -93,13 +95,15 @@ Skill 可以表达例如以下信息：
 
 针对一个 Python 仓库，`code2skill` 可以产出：
 
-- `project-summary.md`：面向人的仓库概览
-- `skill-blueprint.json`：Phase 1 的结构蓝图
-- `skill-plan.json`：LLM 规划出的 Skill 列表
-- `skills/index.md` 和 `skills/*.md`：供 AI 直接消费的 Skill 文档
-- 通过 `adapt` 生成 `AGENTS.md`、`CLAUDE.md`、`.cursor/rules/*`、`.github/copilot-instructions.md`、`.windsurfrules`
-- `report.json`：执行指标、token 估算和影响摘要
-- `state/analysis-state.json`：供增量 CI 复用的状态快照
+- 最终 Skill 产物
+  - `skills/index.md` 和 `skills/*.md`：供 AI 直接消费的 Skill 文档
+  - 通过 `adapt` 生成 `AGENTS.md`、`CLAUDE.md`、`.cursor/rules/*`、`.github/copilot-instructions.md`、`.windsurfrules`
+- 中间工件
+  - `project-summary.md`：面向人的仓库概览
+  - `skill-blueprint.json`：Phase 1 的结构蓝图
+  - `skill-plan.json`：LLM 规划出的 Skill 列表
+  - `report.json`：执行指标、token 估算和影响摘要
+  - `state/analysis-state.json`：供增量 CI 复用的状态快照
 
 ## Skill 在仓库中的角色
 

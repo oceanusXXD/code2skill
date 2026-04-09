@@ -4,6 +4,8 @@ By default, `code2skill` writes artifacts under `.code2skill/` inside the target
 
 This directory is the default artifact bundle root for the repository workflow. It groups the structural analysis outputs, planning outputs, generated Skills, diagnostics, and incremental state under one predictable location.
 
+Within this bundle, `code2skill` treats generated Skills as the final product layer. The other files remain important, but they are intermediate artifacts that support generation, review, reporting, and incremental CI refresh.
+
 ```text
 .code2skill/
   project-summary.md
@@ -24,14 +26,20 @@ This directory is the default artifact bundle root for the repository workflow. 
 
 ## Artifact Roles
 
+### Final product artifacts
+
+- `skills/index.md` and `skills/*.md`: grounded AI-consumable Skill documents
+
+### Intermediate artifacts
+
 - `project-summary.md`: human-readable project overview
 - `skill-blueprint.json`: structural analysis output from Phase 1
 - `skill-plan.json`: LLM-planned Skill inventory
-- `skills/index.md` and `skills/*.md`: grounded AI-consumable Skill documents
 - `report.json`: execution metrics, cost estimates, and impact summaries
+- `references/*.md`: supporting architectural and workflow references
 - `state/analysis-state.json`: incremental execution cache
 
-In product terms, `.code2skill/` is the workspace-local artifact bundle, while `adapt` writes the final target-facing instruction files into the repository locations where each AI tool expects them.
+In product terms, `.code2skill/` is the workspace-local artifact bundle. The final repository-local product is the generated Skill set, while `adapt` publishes that Skill layer into the repository locations where each AI tool expects to read it.
 
 ## Adapted Outputs
 
