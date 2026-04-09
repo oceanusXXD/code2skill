@@ -45,6 +45,8 @@ Once that information is materialized as Skills, it can be consumed directly by 
 
 It covers the full chain from repository scanning, structural analysis, Skill planning, and document generation to tool-specific rule adaptation. It also supports incremental regeneration so Skills can stay aligned as the repository evolves.
 
+In product terms, the final deliverable is the Skill layer itself. Generated Skills under `skills/` and the tool-specific files published by `adapt` are the end product. Blueprints, plans, reports, references, and state snapshots remain explicit intermediate artifacts that support review, debugging, and CI-safe refresh.
+
 For one-off local analysis, `code2skill` can scan an entire repository and generate the full result set.
 For ongoing development workflows, it can combine historical state and code diffs to rebuild only the affected Skills, reducing repeated generation cost and making CI-based updates practical.
 
@@ -94,13 +96,15 @@ This is not the final architecture destination, but it is a meaningful step upwa
 
 From one Python repository, `code2skill` can produce:
 
-- `project-summary.md` for a human-readable repository overview
-- `skill-blueprint.json` for the Phase 1 structural blueprint
-- `skill-plan.json` for the LLM-planned skill set
-- `skills/index.md` and `skills/*.md` for grounded AI-consumable skill documents
-- `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules` via `adapt`
-- `report.json` for execution metrics, token estimates, and impact summaries
-- `state/analysis-state.json` for incremental CI reuse
+- final Skill products
+  - `skills/index.md` and `skills/*.md` for grounded AI-consumable skill documents
+  - `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules` via `adapt`
+- intermediate artifacts
+  - `project-summary.md` for a human-readable repository overview
+  - `skill-blueprint.json` for the Phase 1 structural blueprint
+  - `skill-plan.json` for the LLM-planned skill set
+  - `report.json` for execution metrics, token estimates, and impact summaries
+  - `state/analysis-state.json` for incremental CI reuse
 
 ## The Role Of Skills In A Repository
 

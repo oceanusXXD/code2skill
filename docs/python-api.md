@@ -76,6 +76,11 @@ The pipeline functions return `ScanExecution`, which includes:
 - `report_path`
 - `report`
 
+The embedded `ExecutionReport` also distinguishes between:
+
+- `final_product_files`: the generated Skill artifacts inside the bundle
+- `intermediate_artifact_files`: blueprint, plan, references, report, and state-side artifacts that support the workflow
+
 The lower-level config and report dataclasses are also exported from the package root. The package root also exports the new artifact and summary contracts used by the workflow-oriented surface:
 
 ```python
