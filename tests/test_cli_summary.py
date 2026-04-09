@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from code2skill.domain.results import CommandRunSummary, summarize_scan_execution
+from code2skill.domain.results import CommandRunSummary, summarize_adapt_result, summarize_scan_execution
 from code2skill.models import CostEstimateSummary, ExecutionReport, ImpactSummary, ScanExecution
 from code2skill.models import ImportGraphStats, ProjectProfile, SkillBlueprint
 from code2skill.product.cli_summary import render_summary_lines
+from code2skill.workflows.requests import AdaptRequest
 
 
 def test_render_summary_lines_prints_command_mode_repo_and_writes() -> None:
@@ -50,6 +51,30 @@ def test_render_summary_lines_includes_report_metadata_and_notes() -> None:
     assert "note: reused incremental state" in lines
     assert "note: report-only preview" in lines
     assert f"updated: {Path('/repo/.code2skill/skills/backend.md')}" in lines
+
+
+def test_render_summary_lines_emphasizes_final_products_and_intermediate_counts() -> None:
+    summary = CommandRunSummary(
+        command="scan",
+        mode="full",
+        repo_path=Path("/repo"),
+        output_dir=Path("/repo/.code2skill"),
+        final_product_paths=[
+            Path("/repo/.code2skill/skills/index.md"),
+            Path("/repo/.code2skill/skills/backend.md"),
+        ],
+        intermediate_artifact_paths=[
+            Path("/repo/.code2skill/skill-plan.json"),
+            Path("/repo/.code2skill/report.json"),
+        ],
+    )
+
+    lines = render_summary_lines(summary)
+
+    assert "final_products: 2" in lines
+    assert f"final_product: {Path('/repo/.code2skill/skills/index.md')}" in lines
+    assert f"final_product: {Path('/repo/.code2skill/skills/backend.md')}" in lines
+    assert "intermediate_artifacts: 2" in lines
 
 
 def test_summarize_scan_execution_includes_report_metadata() -> None:
@@ -114,6 +139,8 @@ def test_summarize_scan_execution_includes_report_metadata() -> None:
         llm_provider="qwen",
         llm_model="qwen-plus-latest",
         notes=["reused incremental state"],
+        final_product_files=["/repo/.code2skill/skills/backend.md"],
+        intermediate_artifact_files=["/repo/.code2skill/report.json"],
     )
     execution = ScanExecution(
         repo_path=Path("/repo"),
@@ -138,3 +165,16 @@ def test_summarize_scan_execution_includes_report_metadata() -> None:
     assert summary.llm_model == "qwen-plus-latest"
     assert summary.notes == ["reused incremental state"]
     assert summary.updated_paths == [Path("/repo/.code2skill/skills/backend.md")]
+    assert summary.final_product_paths == [Path("/repo/.code2skill/skills/backend.md")]
+    assert summary.intermediate_artifact_paths == [Path("/repo/.code2skill/report.json")]
+
+
+def test_summarize_adapt_result_treats_written_targets_as_final_products(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+    request = AdaptRequest.create(repo_path=repo_path, target="codex")
+
+    summary = summarize_adapt_result(request, [repo_path / "AGENTS.md"])
+
+    assert summary.final_product_paths == [repo_path / "AGENTS.md"]
+    assert summary.intermediate_artifact_paths == []
