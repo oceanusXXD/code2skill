@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol
 
+from ..domain.artifacts import ArtifactLayout
 from ..config import DEFAULT_REPORT_FILENAME, ScanConfig
 from ..models import ExecutionReport, ImpactSummary
 
@@ -23,6 +24,7 @@ def build_execution_report(
     effective_mode: str,
     repo_path: Path,
     output_dir: Path,
+    report_path: Path,
     inventory,
     budget,
     changed_files: list[str],
@@ -40,6 +42,12 @@ def build_execution_report(
     notes: list[str],
     generated_at: str,
 ) -> ExecutionReport:
+    layout = ArtifactLayout.from_repo_root(repo_path, output_dir)
+    bundle_files = [*written_files, report_path]
+    if config.run.write_state:
+        bundle_files.append(layout.state_path)
+    all_written_files = _dedupe_paths(bundle_files)
+    final_products, intermediate_artifacts = layout.partition_bundle_paths(all_written_files)
     return ExecutionReport(
         generated_at=generated_at,
         command=config.run.command,
@@ -58,7 +66,7 @@ def build_execution_report(
         selected_count=len(budget.selected),
         total_chars=budget.total_chars,
         bytes_read=bytes_read,
-        written_files=[str(path) for path in written_files],
+        written_files=[str(path) for path in all_written_files],
         updated_files=[str(path) for path in updated_files],
         impact=ImpactSummary(
             changed_files=changed_files,
@@ -71,4 +79,18 @@ def build_execution_report(
         incremental_patch_cost=patch_cost,
         pricing=cost_estimator.pricing_dict(),
         notes=notes,
+        final_product_files=[str(path) for path in final_products],
+        intermediate_artifact_files=[str(path) for path in intermediate_artifacts],
     )
+
+
+def _dedupe_paths(paths: list[Path]) -> list[Path]:
+    unique: list[Path] = []
+    seen: set[Path] = set()
+    for path in paths:
+        resolved = path.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique.append(resolved)
+    return unique

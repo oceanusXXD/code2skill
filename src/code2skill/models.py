@@ -346,6 +346,8 @@ class ExecutionReport:
     incremental_patch_cost: CostEstimateSummary
     pricing: dict[str, Any]
     notes: list[str] = field(default_factory=list)
+    final_product_files: list[str] = field(default_factory=list)
+    intermediate_artifact_files: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
