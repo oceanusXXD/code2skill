@@ -41,6 +41,26 @@
 | 平台自动化 | DevEx 团队跨多个 Python 服务运行同一流程 | Python API 返回结构化结果和 readiness |
 | 开源贡献者 onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 docs 说明仓库的工作契约 |
 
+## 基准测试
+
+`code2skill` 评测的是 LLM 调用前的结构证据抽取能力。这个 benchmark 用两个简单 baseline 对比 Skill 生成流水线使用的语义扫描器。
+
+![Structural evidence benchmark](docs/assets/structural-evidence-benchmark.svg)
+
+| 方法 | Gold evidence recall |
+|---|---:|
+| Path-only baseline | 0.048 |
+| AST symbols baseline | 0.357 |
+| code2skill semantic scanner | 1.000 |
+
+Gold set 覆盖 route decorators、service calls、type references、data-flow edges、dynamic imports、raised exceptions、main guards 和 internal dependency edges。复现命令：
+
+```bash
+python benchmarks/evaluate_structural_evidence.py
+```
+
+详情见：[Benchmark Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/benchmarks.md)、[result JSON](https://github.com/oceanusXXD/code2skill/blob/main/benchmarks/results/structural-evidence-benchmark.json)。
+
 ## 安装
 
 需要 Python 3.10 或更高版本。
@@ -241,6 +261,7 @@ print(readiness.ready, readiness.score)
 - [Python API](https://github.com/oceanusXXD/code2skill/blob/main/docs/python-api.md)
 - [Output Layout](https://github.com/oceanusXXD/code2skill/blob/main/docs/output-layout.md)
 - [Algorithm Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/algorithm-notes.md)
+- [Benchmark Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/benchmarks.md)
 - [Release Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/release.md)
 - [Changelog](https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md)
 

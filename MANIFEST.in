@@ -3,7 +3,9 @@ include README.md
 include README.zh-CN.md
 include CHANGELOG.md
 include docs/*.md
+recursive-include docs/assets *.svg
 recursive-include docs/releases *.md
+recursive-include benchmarks *.py *.json
 prune docs/superpowers
 recursive-include src/code2skill py.typed
 prune .code2skill

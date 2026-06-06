@@ -8,7 +8,6 @@ from ..config import (
     CONFIG_FILE_GLOBS,
     ENTRYPOINT_BASENAMES,
     HIGH_VALUE_BASENAMES,
-    is_high_value_path,
     matches_any_glob,
 )
 from ..models import SourceFileSummary
@@ -187,7 +186,7 @@ class FilePrioritizer:
 
     @staticmethod
     def _is_root_config(path: Path, language: str | None) -> bool:
-        return is_high_value_path(path)
+        return path.name in HIGH_VALUE_BASENAMES
 
     @staticmethod
     def _is_documentation(path: Path, language: str | None) -> bool:

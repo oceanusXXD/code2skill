@@ -8,6 +8,15 @@ from code2skill.models import ClassInfo, FunctionInfo, RouteSummary, SourceFileS
 from code2skill.scanner.prioritizer import FilePrioritizer
 
 
+def test_main_py_is_entrypoint_not_root_config() -> None:
+    score, reasons, role = FilePrioritizer().score(Path("src/app/main.py"), "python")
+
+    assert role == "entrypoint"
+    assert "project entrypoint" in reasons
+    assert "root config" not in reasons
+    assert score >= 92
+
+
 @pytest.mark.parametrize(
     ("current_role", "summary", "expected_role"),
     [

@@ -41,6 +41,26 @@ Use it when a Python project needs coding assistants to follow the current modul
 | Platform automation | A DevEx team runs the workflow across many Python services | Python API returns structured results and readiness status |
 | Contributor onboarding | New contributors need project-specific implementation rules | Generated Skills and docs describe the repo's working contracts |
 
+## Benchmark
+
+`code2skill` is evaluated on structural evidence extraction before any LLM call. The benchmark compares two simple baselines against the semantic scanner used by the Skill generation pipeline.
+
+![Structural evidence benchmark](docs/assets/structural-evidence-benchmark.svg)
+
+| Method | Gold evidence recall |
+|---|---:|
+| Path-only baseline | 0.048 |
+| AST symbols baseline | 0.357 |
+| code2skill semantic scanner | 1.000 |
+
+The gold set covers route decorators, service calls, type references, data-flow edges, dynamic imports, raised exceptions, main guards, and internal dependency edges. Reproduce it with:
+
+```bash
+python benchmarks/evaluate_structural_evidence.py
+```
+
+Details: [Benchmark Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/benchmarks.md), [result JSON](https://github.com/oceanusXXD/code2skill/blob/main/benchmarks/results/structural-evidence-benchmark.json).
+
 ## Install
 
 Requires Python 3.10 or newer.
@@ -241,6 +261,7 @@ For lower-level automation, use `create_scan_config(...)` with `scan_repository(
 - [Python API](https://github.com/oceanusXXD/code2skill/blob/main/docs/python-api.md)
 - [Output Layout](https://github.com/oceanusXXD/code2skill/blob/main/docs/output-layout.md)
 - [Algorithm Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/algorithm-notes.md)
+- [Benchmark Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/benchmarks.md)
 - [Release Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/release.md)
 - [Changelog](https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md)
 

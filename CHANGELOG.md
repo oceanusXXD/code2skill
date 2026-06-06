@@ -5,6 +5,8 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 
 ## Unreleased
 
+- Added a reproducible structural evidence benchmark with path-only and AST-symbol baselines, README chart, result JSON, and benchmark notes.
+- Fixed Python entrypoint role scoring so `main.py` and similar entry files are not mislabeled as root configuration files.
 - Added semantic Python extraction for call targets, dynamic imports, type references, raised exceptions, class attributes, and lightweight data-flow edges.
 - Improved internal import resolution for detailed `from ... import ...` records and dynamic imports.
 - Fed call/type/data-flow evidence into file prioritization, planning prompts, generated skeletons, and project summaries.
