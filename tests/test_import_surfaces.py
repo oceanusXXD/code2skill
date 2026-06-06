@@ -67,13 +67,16 @@ def test_package_public_api_still_resolves() -> None:
     data = _run_python(
         "import json; "
         "from code2skill import ("
-        "adapt_repository, adapt_skills, create_scan_config, estimate, estimate_repository, "
+        "AdoptionCheck, AdoptionReadiness, adapt_repository, adapt_skills, create_scan_config, doctor, estimate, estimate_repository, "
         "run_ci, run_ci_repository, scan, scan_repository"
         "); "
         "print(json.dumps({"
+        "'AdoptionCheck': callable(AdoptionCheck), "
+        "'AdoptionReadiness': callable(AdoptionReadiness), "
         "'adapt_repository': callable(adapt_repository), "
         "'adapt_skills': callable(adapt_skills), "
         "'create_scan_config': callable(create_scan_config), "
+        "'doctor': callable(doctor), "
         "'estimate_shortcut': callable(estimate), "
         "'scan': callable(scan_repository), "
         "'estimate': callable(estimate_repository), "
@@ -83,9 +86,12 @@ def test_package_public_api_still_resolves() -> None:
         "}))"
     )
     assert data == {
+        "AdoptionCheck": True,
+        "AdoptionReadiness": True,
         "adapt_repository": True,
         "adapt_skills": True,
         "create_scan_config": True,
+        "doctor": True,
         "estimate_shortcut": True,
         "scan": True,
         "estimate": True,
@@ -99,8 +105,9 @@ def test_module_entrypoint_help_and_version_work() -> None:
     help_output = _run_module("--help")
     version_output = _run_module("--version")
 
-    assert "Generate repository-aware Skills" in help_output.stdout
+    assert "Compile Python repository knowledge" in help_output.stdout
     assert "adapt" in help_output.stdout
+    assert "doctor" in help_output.stdout
     assert version_output.stdout.strip() == f"code2skill {__version__}"
 
 

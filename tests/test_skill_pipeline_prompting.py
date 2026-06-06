@@ -191,6 +191,8 @@ def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
     assert "Dependency summary:" in prompt
     assert "Heuristic recommendations (low-priority reference, do not follow blindly):" in prompt
     assert "Prefer package boundaries, directory boundaries, dependency clusters, and stable workflows over generic labels." in prompt
+    assert "Documentation, release, packaging, and CI files can support a skill" in prompt
+    assert "Use names that describe the repository subsystem or workflow" in prompt
 
 
 def test_skill_generator_prompt_and_output_are_evidence_driven(
@@ -257,6 +259,7 @@ def test_skill_generator_prompt_and_output_are_evidence_driven(
     assert "Do not use emoji, decorative symbols, or extra headings." in prompt
     assert "Output exactly the 5 sections listed below and nothing else." in prompt
     assert 'Every bullet under "Core Rules" must include a source path in the same bullet.' in prompt
+    assert "Write for an engineer modifying this repository" in prompt
 
 
 def test_skill_generator_replaces_ungrounded_snippets_with_exact_context(

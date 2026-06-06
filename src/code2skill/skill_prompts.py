@@ -59,19 +59,24 @@ Hard requirements:
 12. Keep "Core Rules" to 4-6 high-value bullets.
 13. Every code block must be copied verbatim from the provided file context. Do not simplify, abbreviate, or synthesize snippets.
 14. If you cannot quote an exact code snippet from the provided context, write one bullet under "Typical Patterns": "[Needs confirmation] No exact grounded snippet is available in the provided context."
+15. Write for an engineer modifying this repository: favor concrete edit guidance over general descriptions.
+16. Do not include marketing copy, release notes, package metadata summaries, or generic documentation advice unless those files define the subsystem in scope.
+17. Avoid rules that merely restate what a symbol is named; explain the behavior, boundary, or contract that should guide future edits.
+18. Keep code snippets short and choose snippets that demonstrate a rule or flow.
 
 Return Markdown with exactly this structure:
 
 # {skill.title}
 
 ## Overview
-Write 1-2 sentences describing the role and importance of this area in the repository.
+Write 1-2 sentences describing what a maintainer needs to know before changing this area.
 
 ## Core Rules
 - Use a single-level bullet list.
 - Each bullet must be concrete, actionable, and include "Source: path[:symbol]".
 - If a rule is only partially supported, describe the scope or mark it [Needs confirmation].
 - Do not turn syntax trivia or accidental similarity into a rule.
+- Prefer rules about behavior, data flow, ownership boundaries, inputs, outputs, and failure handling.
 
 ## Typical Patterns
 Show 1-3 short code snippets. Explain the source file before each snippet.
@@ -80,7 +85,7 @@ Show 1-3 short code snippets. Explain the source file before each snippet.
 List only anti-patterns that can be inferred from the current code. If evidence is insufficient, write one bullet: "[Needs confirmation] The current context is not sufficient to derive a stable anti-pattern."
 
 ## Common Flows
-If this area has a stable operational flow, write it step by step. Otherwise write one bullet: "[Needs confirmation] The current context does not show a stable flow."
+If this area has a stable operational flow, write it as entry point -> key decision -> output. Otherwise write one bullet: "[Needs confirmation] The current context does not show a stable flow."
 """.strip()
 
 

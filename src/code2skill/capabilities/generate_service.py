@@ -123,21 +123,37 @@ class SkillPipelineService:
         artifacts: dict[str, str] = {}
         plan_skill_names = {skill.name for skill in plan.skills}
         planned_names = [skill.name for skill in plan.skills]
+        plan_matched_skills: list[str] = []
+        if changed_files:
+            plan_matched_skills = match_planned_skills(
+                _dedupe_paths([*affected_files, *changed_files]),
+                plan,
+            )
+            if not affected_skill_names and plan_matched_skills:
+                affected_skill_names = plan_matched_skills
+
         present_skills = [
             name for name in affected_skill_names if name in plan_skill_names
         ]
         missing_skills = [
             name for name in affected_skill_names if name not in plan_skill_names
         ]
-        if present_skills:
-            affected_skill_names = present_skills
-        elif missing_skills:
+        if missing_skills and plan_matched_skills:
+            affected_skill_names = _dedupe_paths([*present_skills, *plan_matched_skills])
+            present_skills = [
+                name for name in affected_skill_names if name in plan_skill_names
+            ]
+            missing_skills = []
+
+        if missing_skills or (changed_files and not affected_skill_names):
             plan = planner.plan(blueprint=blueprint, repo_path=repo_path)
             artifacts["skill-plan.json"] = render_skill_plan(plan)
             planned_names = [skill.name for skill in plan.skills]
             affected_skill_names = match_planned_skills(affected_files, plan)
             artifacts.update(generator.generate_all(blueprint=blueprint, plan=plan))
             return artifacts, planned_names, planned_names
+        if present_skills:
+            affected_skill_names = present_skills
 
         if not affected_skill_names:
             return artifacts, [], planned_names
@@ -153,3 +169,14 @@ class SkillPipelineService:
             )
         )
         return artifacts, affected_skill_names, planned_names
+
+
+def _dedupe_paths(paths: list[str]) -> list[str]:
+    result: list[str] = []
+    seen: set[str] = set()
+    for path in paths:
+        if path in seen:
+            continue
+        seen.add(path)
+        result.append(path)
+    return result

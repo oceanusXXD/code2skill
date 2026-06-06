@@ -219,8 +219,11 @@ Hard constraints:
 12. Skill names must use kebab-case.
 13. scope, why, and read_reason must stay evidence-based and concrete.
 14. Testing-related skills should be secondary unless the test layer is itself a major subsystem.
-15. Write the output values in English.
-16. Do not use emoji.
+15. Documentation, release, packaging, and CI files can support a skill, but should not define a skill unless they are the actual subsystem being maintained.
+16. Each read_files list should include implementation files when implementation files are available; tests should usually be supporting evidence.
+17. Use names that describe the repository subsystem or workflow, not marketing labels or AI-tool names.
+18. Write the output values in English.
+19. Do not use emoji.
 
 Return strict JSON:
 {{

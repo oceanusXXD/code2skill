@@ -281,3 +281,18 @@ def adapt_repository(
         source_dir=source_dir,
     )
     return written_paths
+
+
+def doctor(
+    repo_path: Path | str = ".",
+    *,
+    output_dir: Path | str = ".code2skill",
+    target: str | None = None,
+):
+    from .application import inspect_adoption
+
+    return inspect_adoption(
+        repo_path=repo_path,
+        output_dir=output_dir,
+        target=target,
+    )

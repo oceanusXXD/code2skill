@@ -16,6 +16,7 @@ CLI, API, and workflow code.
 class ArtifactLayout:
     root: Path
     project_summary_path: Path
+    adoption_guide_path: Path
     blueprint_path: Path
     skill_plan_path: Path
     report_path: Path
@@ -42,6 +43,7 @@ class ArtifactLayout:
         return cls(
             root=artifact_root,
             project_summary_path=artifact_root / "project-summary.md",
+            adoption_guide_path=artifact_root / "adoption-guide.md",
             blueprint_path=artifact_root / "skill-blueprint.json",
             skill_plan_path=artifact_root / "skill-plan.json",
             report_path=artifact_root / "report.json",

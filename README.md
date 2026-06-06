@@ -4,430 +4,86 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/code2skill)](https://pypi.org/project/code2skill/)
 [![License](https://img.shields.io/pypi/l/code2skill)](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE)
 
-English README. For Chinese documentation, see [README.zh-CN.md](./README.zh-CN.md).
+Chinese documentation: [README.zh-CN.md](https://github.com/oceanusXXD/code2skill/blob/main/README.zh-CN.md).
 
-Additional docs:
+`code2skill` compiles a Python repository into reviewable AI working instructions.
 
-- [CLI Guide](./docs/cli.md)
-- [CI Guide](./docs/ci.md)
-- [Python API](./docs/python-api.md)
-- [Output Layout](./docs/output-layout.md)
-- [Release Guide](./docs/release.md)
-- [Changelog](./CHANGELOG.md)
+It reads real source-code evidence, builds a repository blueprint, asks an LLM to plan and write focused Skills, and can publish the same knowledge to Codex, Claude Code, Cursor, GitHub Copilot, and Windsurf. The result is a committed, testable instruction layer instead of stale chat context or scattered hand-written rules.
 
-`code2skill` is a CLI for real Python repositories. It turns source code into structured project knowledge, Skill documents that AI coding assistants can consume directly, and rule files adapted for tools such as Cursor, Claude Code, Codex, GitHub Copilot, and Windsurf.
+Use it when a Python project needs AI coding assistants to understand current module boundaries, workflows, contracts, and maintenance rules from the code that actually exists.
 
-It provides a full chain from repository scanning and structural analysis to Skill generation and rule adaptation, with incremental updates based on diffs and historical state. The generated outputs are written to disk so they can be reviewed, committed, reused, and continuously integrated into local development and CI workflows.
+## What It Solves
 
-## Why Skills Matter
+- Turns repository structure and source evidence into AI-ready Skills.
+- Keeps generated knowledge reviewable in Git and refreshable in CI.
+- Publishes one Skill layer to several AI coding tools.
+- Preserves hand-written target-file content through managed blocks.
+- Validates generated bundles and adapted tool files with `doctor`.
+- Supports OpenAI Responses API, OpenAI-compatible Responses endpoints, Claude, and Qwen.
 
-In traditional software development, the `README` is the standard entry document for a project. It is written for human developers and usually covers project introduction, installation, usage, development setup, and examples.
+## Install
 
-In the AI IDE era, AI tools also read READMEs, documentation, and source code to understand a project. At that point, a repository needs a form of knowledge that is better suited for direct AI consumption. READMEs still matter, but they often mix user guidance, developer guidance, background context, historical notes, sample snippets, and presentation-oriented material. That structure is natural for human readers. For AI systems, however, project conventions, important patterns, and execution boundaries are more useful when they are presented in a more unified and structured form.
-
-A Skill is that AI-oriented project document form.
-
-In practice, a Skill can be treated as an engineering-grade README for AI. It organizes implementation-relevant knowledge into stable, clear, and maintainable documents so that AI can read consistent project context across different tools, sessions, and stages of work.
-
-Skills let a repository express information such as:
-
-- the core structure of the project and the responsibility boundaries of modules
-- the important roles, call relationships, and behavioral constraints in the code
-- existing patterns, conventions, and preferred extension paths
-- the implementation path and modification style expected for specific tasks
-- a unified source for downstream tool-specific rule files
-
-Once that information is materialized as Skills, it can be consumed directly by AI IDEs, agents, and automation workflows. Developers can also iterate on collaboration practices around those Skills and turn "how this repository should be worked on" into an auditable, commit-friendly, evolvable engineering asset.
-
-## What code2skill Provides
-
-`code2skill` builds project knowledge from real Python repositories and generates a set of outputs that can be written to disk, tracked over time, and integrated into normal engineering workflows.
-
-It covers the full chain from repository scanning, structural analysis, Skill planning, and document generation to tool-specific rule adaptation. It also supports incremental regeneration so Skills can stay aligned as the repository evolves.
-
-In product terms, the final deliverable is the Skill layer itself. Generated Skills under `skills/` and the tool-specific files published by `adapt` are the end product. Blueprints, plans, reports, references, and state snapshots remain explicit intermediate artifacts that support review, debugging, and CI-safe refresh.
-
-For one-off local analysis, `code2skill` can scan an entire repository and generate the full result set.
-For ongoing development workflows, it can combine historical state and code diffs to rebuild only the affected Skills, reducing repeated generation cost and making CI-based updates practical.
-
-## What It Guarantees
-
-- Python-first analysis with `ast`, import graph analysis, file-role inference, and pattern detection
-- Evidence-first prompts: built-in prompts are in English, ban emoji, and avoid unsupported claims
-- Durable outputs: repository knowledge is written to files instead of chat history
-- Measurable runs: every `scan`, `estimate`, or `ci` execution writes a `report.json`
-- Incremental operation: CI can reuse prior state and only regenerate impacted skills
-
-## Command Model
-
-| Command | Uses LLM | Writes outputs | Primary purpose |
-|---|---|---|---|
-| `scan` | Yes, unless `--structure-only` | Yes | Full local generation |
-| `estimate` | No | `report.json` only | Cost and impact preview |
-| `ci` | Yes, unless `--structure-only` | Yes | Automated full or incremental execution |
-| `adapt` | No | Yes | Copy or merge generated skills into tool-specific targets |
-
-## Workflow-Oriented Product Model
-
-The public surface now leans into one repository-knowledge workflow instead of four unrelated commands.
-
-In practical terms, users move through a predictable chain:
-
-1. choose a repository root and output layout
-2. run `scan` or `estimate` to build structural understanding or preview cost/impact
-3. use `ci` for automation-friendly full or incremental rebuilds
-4. use `adapt` to publish the generated Skill artifacts into target-specific instruction files
-
-This model is reflected both in the CLI and the Python API. Repository-relative path handling is shared, artifact layout is modeled explicitly, and command summaries now use one normalized result shape instead of each entrypoint formatting its own output ad hoc.
-
-## Current Internal Architecture
-
-The current codebase is still intentionally Python-first, but it now has clearer internal layers than the original single-orchestrator shape.
-
-- `application.py` acts as the application-facing facade for CLI and Python API entrypoints
-- `workflows/requests.py` centralizes repository-root-aware path and output resolution
-- `domain/` defines stable artifact and summary contracts such as `ArtifactLayout` and `CommandRunSummary`
-- `capabilities/adapt/` isolates target metadata for tool-specific output generation
-- `capabilities/generate_service.py` owns skill planner/generator coordination that previously lived directly inside `core.py`
-
-This is not the final architecture destination, but it is a meaningful step upward: the public surface is thinner, shared contracts are explicit, and the skill-generation hotspot has started moving out of the central orchestrator.
-
-## What It Generates
-
-From one Python repository, `code2skill` can produce:
-
-- final Skill products
-  - `skills/index.md` and `skills/*.md` for grounded AI-consumable skill documents
-  - `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules` via `adapt`
-- intermediate artifacts
-  - `project-summary.md` for a human-readable repository overview
-  - `skill-blueprint.json` for the Phase 1 structural blueprint
-  - `skill-plan.json` for the LLM-planned skill set
-  - `report.json` for execution metrics, token estimates, and impact summaries
-  - `state/analysis-state.json` for incremental CI reuse
-
-When state writing is enabled, both `report.json` and the returned `ScanExecution.output_files` account for `state/analysis-state.json` as an intermediate artifact rather than a final Skill product.
-
-## The Role Of Skills In A Repository
-
-Skills are the standardized AI-facing expression layer of repository knowledge.
-
-They connect repository structure, implementation details, team conventions, and tool rules so an AI system can enter the project with one consistent context source instead of repeatedly reconstructing it from README files, scattered docs, previous implementations, and chat history.
-
-In engineering practice, that creates direct value:
-
-- it gives AI IDEs a unified, stable, low-noise project entry point
-- it lets developers turn recurring implementation patterns into reusable guidance
-- it helps future changes follow the same boundaries and extension paths already present in the repository
-- it gives rule-file generation a single consistent source of truth
-- it keeps repository knowledge incrementally maintained as code changes, instead of periodically rewritten by hand
-
-That is why `code2skill` is really about organizing, transmitting, and updating repository knowledge for AI collaboration.
-
-## Incremental Updates And Ongoing Maintenance
-
-Repository knowledge needs to evolve with the code.
-
-`code2skill` supports incremental regeneration based on historical analysis state and the current change scope. After code changes, it can identify the affected areas, rebuild the relevant Skills, and preserve outputs that are still valid. That makes it suitable for local development loops, pull request checks, and continuous CI automation.
-
-This workflow has several practical benefits:
-
-- it reduces the cost of repeated full regeneration on larger repositories
-- it keeps Skills synchronized with the current code state
-- it moves project-knowledge maintenance into the normal development process
-- it makes generated outputs reviewable, comparable, and commit-friendly
-
-Skills therefore become a long-lived engineering asset rather than a temporary prompt artifact.
-
-## Adapting To Multiple AI Tools
-
-Different AI coding tools use different rule file formats, but they all need high-quality project context.
-
-`code2skill` first generates a unified Skill-centered knowledge layer, then uses `adapt` to copy or merge that layer into target-specific formats, including:
-
-- `AGENTS.md`
-- `CLAUDE.md`
-- `.cursor/rules/*`
-- `.github/copilot-instructions.md`
-- `.windsurfrules`
-
-That approach lets a repository maintain one core knowledge representation and distribute consistent context and constraints to multiple AI tools without duplicating maintenance effort.
-
-## When To Use code2skill
-
-`code2skill` is a good fit for:
-
-- Python repositories that want a stable project context for AI IDEs
-- teams that want repository knowledge committed as files instead of kept in chat threads
-- engineering workflows that need CI-based updates for AI rule files
-- projects that want diff-aware control over regeneration scope and cost
-- repositories that need one knowledge source adapted to multiple AI coding tools
-
-## Pipeline
-
-### Phase 1: Structural Scan
-
-Input:
-
-- repository path
-
-Output:
-
-- `project-summary.md`
-- `skill-blueprint.json`
-- `references/architecture.md`
-- `references/code-style.md`
-- `references/workflows.md`
-- `references/api-usage.md`
-- `report.json`
-- `state/analysis-state.json`
-
-Main steps:
-
-1. Discover and filter files.
-2. Apply coarse scoring and budget selection.
-3. Extract Python structure with `ast`.
-4. Build the internal import graph.
-5. Refine file priority and inferred roles.
-6. Detect patterns and abstract rules.
-7. Assemble the final `SkillBlueprint`.
-
-### Phase 2: Skill Planning
-
-Input:
-
-- `skill-blueprint.json`
-
-Output:
-
-- `skill-plan.json`
-
-Main steps:
-
-1. Compress the project profile, directories, clusters, modules, rules, and workflows.
-2. Make one LLM call.
-3. Decide which skills should exist.
-4. Pick the most representative files for each skill.
-
-### Phase 3: Skill Generation
-
-Input:
-
-- `skill-plan.json`
-- selected source files or extracted structural summaries
-
-Output:
-
-- `skills/index.md`
-- `skills/*.md`
-
-Main steps:
-
-1. Gather the exact context for each skill.
-2. Inline small files and structural summaries for large files.
-3. Filter repository rules relevant to that skill.
-4. Generate one grounded Skill document per skill.
-5. Sanitize the final Markdown and keep uncertainty explicit as `[Needs confirmation]`.
-
-### Adapt Phase
-
-Input:
-
-- generated `skills/*.md`
-
-Output:
-
-- Cursor rules
-- `CLAUDE.md`
-- `AGENTS.md`
-- `.github/copilot-instructions.md`
-- `.windsurfrules`
-
-## Prompt Policy
-
-The built-in prompts are intentionally opinionated:
-
-- Planner output must be in English, use kebab-case names, stay evidence-based, and avoid emoji.
-- Skill generation must stay grounded in provided files and rules only.
-- Generated skills must use a fixed five-section structure.
-- When evidence is incomplete, the output must say `[Needs confirmation]` instead of inventing certainty.
-
-This keeps the generated documents more stable for downstream AI tools and easier to review in Git.
-
-## Measured On This Repository
-
-The numbers below were collected on `2026-03-17` from this repository at commit `3714510`, on Windows with Python `3.10.6`, using the current default limits and heuristic pricing.
-
-| Metric | Result |
-|---|---|
-| `scan --structure-only` wall-clock time | `1.33s` |
-| `estimate` wall-clock time | `1.30s` |
-| Candidate files / selected files | `51 / 31` |
-| Bytes read in full structure-only scan | `314,585` |
-| Retained context size | `119,984 chars` |
-| Heuristic recommended skills | `2` |
-| First-generation estimate | `6,138` input tokens, `1,610` output tokens |
-| Per-skill estimate | `project-overview: 450 in / 850 out`, `backend-architecture: 5,688 in / 760 out` |
-| Second `ci --mode auto` run on reused state | `incremental` |
-| Incremental no-diff bytes read | `20,939` |
-| Incremental no-diff affected skills | `0` |
-
-Important notes:
-
-- The default pricing mode is heuristic. It estimates chars and tokens, but leaves USD at `0.0` until you provide real model pricing.
-- `estimate` does not call an LLM. It predicts likely first-generation, incremental rewrite, and incremental patch costs from the scanned repository structure.
-- `ci --mode auto` really does switch modes based on repository state. On this repo, the first run was `full` because no prior state existed; the second run was `incremental`.
-
-## Installation
-
-Published package:
+Requires Python 3.10 or newer.
 
 ```bash
-pip install code2skill
-```
-
-Development install:
-
-```bash
-pip install -e .[dev]
-```
-
-Focused extras:
-
-```bash
-pip install -e .[test]
-pip install -e .[release]
-```
-
-CLI entrypoints:
-
-```bash
+python -m pip install code2skill
+code2skill --version
 code2skill --help
+```
+
+The expected CLI commands are `scan`, `estimate`, `ci`, `adapt`, and `doctor`.
+
+If the console script is not on `PATH`, use the module entry point:
+
+```bash
 python -m code2skill --help
 ```
 
-Top-level Python package shortcuts:
+## First Run
 
-```python
-from code2skill import adapt_repository, create_scan_config, estimate, run_ci, scan
+Run a no-LLM structural check first. This verifies that the package can read the repository and write the local artifact bundle.
+
+```bash
+code2skill scan . --structure-only
 ```
 
-These helpers live in `code2skill.api` and are re-exported from the package root as the supported high-level Python API.
+Preview model cost and incremental impact:
 
-Additional package-root contracts now include:
-
-```python
-from code2skill import ArtifactLayout, CommandRunSummary
+```bash
+code2skill estimate .
 ```
 
-These are useful when you want to work with artifact bundle locations or present normalized command summaries in your own automation.
-
-## Use As A CLI
-
-Set provider credentials first, then run the command against an explicit repository path.
-
-Bash:
+Generate Skills with a model provider:
 
 ```bash
 export QWEN_API_KEY=...
-export CODE2SKILL_LLM=qwen
-export CODE2SKILL_MODEL=qwen-plus-latest
-
-code2skill scan /path/to/repo
+code2skill scan . --llm qwen --model qwen-plus-latest
 ```
 
-PowerShell:
-
-```powershell
-$env:QWEN_API_KEY="..."
-$env:CODE2SKILL_LLM="qwen"
-$env:CODE2SKILL_MODEL="qwen-plus-latest"
-
-code2skill scan D:\path\to\repo
-```
-
-Structure-only scan:
+Publish the generated Skill layer to an AI tool:
 
 ```bash
-code2skill scan /path/to/repo --structure-only
+code2skill adapt . --target codex
 ```
 
-Cost and impact preview:
+Check that the bundle and target file are ready to use:
 
 ```bash
-code2skill estimate /path/to/repo
+code2skill doctor . --target codex
 ```
 
-Automatic incremental mode:
+Review and commit the files that matter for your workflow:
 
-```bash
-code2skill ci /path/to/repo --mode auto --base-ref origin/main
-```
+- `.code2skill/adoption-guide.md`
+- `.code2skill/skills/index.md`
+- `.code2skill/skills/*.md`
+- adapted target files such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, or `.windsurfrules`
 
-Adapt generated skills into Codex format:
+Use `.code2skill/report.json` to inspect selected files, execution mode, changed files, affected Skills, cost estimates, and generated outputs.
 
-```bash
-code2skill adapt /path/to/repo --target codex
-```
+## Model Configuration
 
-`adapt` writes target files under `repo_path`, and relative `--source-dir` values are resolved from that repository root. Relative `--output-dir`, `--report-json`, `--diff-file`, and `--pricing-file` values are also resolved from `repo_path`. The command fails fast if the source skills directory does not exist.
-
-Successful runs print a compact workflow summary. For generation-oriented commands this includes mode, repository type, selected file counts, retained character volume, output directory, report path when present, and written artifact paths.
-
-## Use As A Python Package
-
-For simple automation, use the shortcut functions from `code2skill.api` (or the package-root re-exports) instead of manually building nested dataclasses:
-
-```python
-from pathlib import Path
-
-from code2skill import adapt_repository, estimate, scan
-
-repo = Path("/path/to/repo")
-
-preview = estimate(repo)
-result = scan(
-    repo,
-    output_dir=".code2skill",
-    llm_provider="qwen",
-    llm_model="qwen-plus-latest",
-    max_skills=6,
-)
-written = adapt_repository(repo, target="codex")
-
-print(preview.report_path)
-print(result.generated_skills)
-print(written)
-```
-
-For advanced control, use `create_scan_config` with `scan_repository`, `estimate_repository`, or `run_ci_repository`.
-
-Path semantics in the Python API:
-
-- `repo_path` is resolved first and treated as the repository root
-- relative `output_dir` values are resolved from `repo_path`
-- relative `report_path`, `diff_file`, and `pricing_file` values are resolved from `repo_path`
-- relative `source_dir` values passed to `adapt_repository(...)` are resolved from `repo_path`
-- when `report_path` is omitted, it defaults to `output_dir/report.json`
-- incremental state is reused only when the saved snapshot belongs to the same repository root
-
-## LLM Backends
-
-Supported providers:
-
-- `openai`
-- `claude`
-- `qwen`
-
-Environment variables:
-
-```bash
-export OPENAI_API_KEY=...
-export ANTHROPIC_API_KEY=...
-export QWEN_API_KEY=...
-```
-
-Common defaults:
+Common environment variables:
 
 ```bash
 export CODE2SKILL_LLM=qwen
@@ -437,94 +93,150 @@ export CODE2SKILL_MAX_SKILLS=6
 export CODE2SKILL_BASE_REF=origin/main
 ```
 
-Notes:
-
-- `qwen` uses the DashScope international compatible endpoint by default.
-- `qwen` reads `QWEN_API_KEY` and also accepts `DASHSCOPE_API_KEY`.
-- Missing credentials fail fast instead of silently degrading.
-
-## Cost Estimation And `report.json`
-
-`estimate` is intended for preflight checks and CI planning. It does not write the full artifact set. It only writes `report.json`.
-
-The report includes:
-
-- selected file counts and retained character volume
-- full-scan bytes read
-- changed files, affected files, and affected skills
-- `first_generation_cost`
-- `incremental_rewrite_cost`
-- `incremental_patch_cost`
-- pricing metadata and execution notes
-
-If you want real USD output instead of token-only estimates, pass a pricing file:
+Provider keys:
 
 ```bash
-code2skill estimate --pricing-file pricing.json
+export OPENAI_API_KEY=...
+export ANTHROPIC_API_KEY=...
+export QWEN_API_KEY=...
 ```
 
-`pricing.json` must contain:
+OpenAI Responses API:
 
-```json
-{
-  "model": "qwen-plus-latest",
-  "input_per_1m": 0.0,
-  "output_per_1m": 0.0,
-  "chars_per_token": 4.0
-}
+```bash
+export CODE2SKILL_LLM=openai
+export CODE2SKILL_MODEL=gpt-4o-mini
+export CODE2SKILL_OPENAI_API_KEY=...
+code2skill scan .
 ```
 
-Replace `0.0` with your current provider prices before using it for budgeting.
+OpenAI-compatible Responses endpoint:
 
-## CI/CD Integration
+```bash
+export CODE2SKILL_LLM=openai
+export CODE2SKILL_MODEL=<responses-compatible-model>
+export CODE2SKILL_OPENAI_API_KEY=...
+export CODE2SKILL_OPENAI_BASE_URL=https://example.com/v1
+code2skill scan .
+```
 
-`code2skill ci --mode auto` is the main automation entrypoint.
+`CODE2SKILL_OPENAI_BASE_URL` may point either to a `/v1` base URL or directly to a `/responses` endpoint.
 
-It can:
+## Commands
 
-- detect changed files from git history or an explicit diff file
-- expand impact through reverse dependencies
-- map changed files to affected skills
-- regenerate only the required Skill outputs
-- prune stale skill files when the skill set changes
-
-Common reasons to fall back to a full rebuild:
-
-- no previous `.code2skill/state/analysis-state.json`
-- no previous `skill-plan.json`
-- important config changed, such as `pyproject.toml`
-- too many changed files for a safe incremental run
-- cached state was generated for a different repository root
-
-Recommended GitHub Actions workflow:
-See [CI Guide](./docs/ci.md) for a consumer workflow example and the checked-in repository workflows.
-
-Notes:
-
-- `fetch-depth: 0` matters, otherwise the base ref may not exist locally.
-- Caching `.code2skill` is what enables fast incremental reuse.
-- The first CI run on a branch usually behaves like a full build because there is no prior state.
-- If you want a no-LLM CI sanity check, use `code2skill ci --mode auto --structure-only`.
-- This repository now includes checked-in workflows under `.github/workflows/` for CI, GitHub Releases, and manual PyPI publication.
+| Command | Calls LLM | Writes files | Primary purpose |
+|---|---:|---:|---|
+| `scan` | Yes, unless `--structure-only` | Yes | Full local analysis and Skill generation |
+| `estimate` | No | `report.json` only | Cost and impact preview |
+| `ci` | Yes, unless `--structure-only` | Yes | Automation-friendly full or incremental refresh |
+| `adapt` | No | Yes | Publish generated Skills to target AI tool files |
+| `doctor` | No | No | Validate bundle, Skill plan, state, target files, and readiness |
 
 ## Output Layout
 
-See [Output Layout](./docs/output-layout.md) for the command-by-command artifact matrix and adapted target files.
+The default artifact directory is `.code2skill/`.
 
-## Typical Use Cases
+| Path | Purpose |
+|---|---|
+| `adoption-guide.md` | Repository-specific adoption checklist and next workflow |
+| `project-summary.md` | Human-readable repository summary |
+| `skill-blueprint.json` | Structural repository blueprint |
+| `skill-plan.json` | LLM-planned Skill inventory |
+| `references/*.md` | Architecture, style, workflow, and API references |
+| `skills/index.md` | Generated Skill index |
+| `skills/*.md` | Generated AI working instructions |
+| `report.json` | Execution metrics, cost estimates, changed files, affected Skills, and artifact lists |
+| `state/analysis-state.json` | Incremental CI cache |
 
-- generate Codex `AGENTS.md` from an existing Python backend repository
-- generate Cursor rules from real source code instead of manually maintained notes
-- give Claude Code a repository-specific skill set before a large refactor
-- keep AI-facing repository guidance current in CI after changes land
+## Target Tools
+
+| Target | Command | Output |
+|---|---|---|
+| Codex | `code2skill adapt . --target codex` | `AGENTS.md` |
+| Claude Code | `code2skill adapt . --target claude` | `CLAUDE.md` |
+| Cursor | `code2skill adapt . --target cursor` | `.cursor/rules/*.md` plus `.cursor/rules/.code2skill-manifest.json` |
+| GitHub Copilot | `code2skill adapt . --target copilot` | `.github/copilot-instructions.md` |
+| Windsurf | `code2skill adapt . --target windsurf` | `.windsurfrules` |
+| All targets | `code2skill adapt . --target all` | all of the above |
+
+Merge-style targets use a managed block:
+
+```text
+<!-- code2skill:start -->
+...
+<!-- code2skill:end -->
+```
+
+Content outside the managed block is preserved. Cursor uses copied Skill files and a manifest so later runs can remove stale generated files while keeping unmanaged team rules.
+
+## CI Refresh
+
+After the first bundle exists, use `ci --mode auto` to reuse state and regenerate only affected Skill outputs when code changes.
+
+```bash
+code2skill ci . --mode auto --base-ref origin/main --head-ref HEAD
+code2skill adapt . --target codex
+code2skill doctor . --target codex
+```
+
+The first CI run usually falls back to `full` because no state exists yet. Later runs can use `.code2skill/state/analysis-state.json` and `skill-plan.json` to decide whether incremental refresh is safe.
+
+## Python API
+
+The package root exports the supported high-level API:
+
+```python
+from pathlib import Path
+
+from code2skill import adapt_repository, doctor, estimate, scan
+
+repo = Path(".")
+
+preview = estimate(repo)
+result = scan(
+    repo,
+    llm_provider="qwen",
+    llm_model="qwen-plus-latest",
+    max_skills=6,
+)
+written = adapt_repository(repo, target="codex")
+readiness = doctor(repo, target="codex")
+
+print(preview.report_path)
+print(result.generated_skills)
+print(written)
+print(readiness.ready, readiness.score)
+```
+
+For lower-level automation, use `create_scan_config(...)` with `scan_repository(...)`, `estimate_repository(...)`, or `run_ci_repository(...)`.
+
+## Documentation
+
+- [Getting Started](https://github.com/oceanusXXD/code2skill/blob/main/docs/getting-started.md)
+- [Use Cases](https://github.com/oceanusXXD/code2skill/blob/main/docs/use-cases.md)
+- [CLI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/cli.md)
+- [CI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/ci.md)
+- [Python API](https://github.com/oceanusXXD/code2skill/blob/main/docs/python-api.md)
+- [Output Layout](https://github.com/oceanusXXD/code2skill/blob/main/docs/output-layout.md)
+- [Release Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/release.md)
+- [Changelog](https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md)
+
+## Guarantees
+
+- Python-first analysis using `ast`, import graph analysis, file-role inference, and pattern detection.
+- Evidence-first prompts that require source references and keep uncertainty explicit.
+- Durable outputs written to disk instead of kept in chat history.
+- Measurable runs through `report.json`.
+- Incremental operation through state reuse, diff impact, and affected Skill mapping.
+- Readiness validation through `doctor`.
 
 ## Limitations
 
-- optimized for Python repositories
-- non-Python code is not a first-class analysis target
-- output quality still depends on repository clarity and the chosen model
-- the package is still in the `0.1.x` stage and will continue to evolve
+- Optimized for Python repositories.
+- Non-Python code is scanned only as supporting context, not as a first-class analysis target.
+- Output quality still depends on repository clarity and the selected model.
+- The package is in the `0.1.x` stage and public behavior may continue to evolve.
 
 ## License
 
-Apache-2.0. See [LICENSE](./LICENSE).
+Apache-2.0. See [LICENSE](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE).

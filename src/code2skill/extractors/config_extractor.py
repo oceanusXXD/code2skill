@@ -12,10 +12,10 @@ from ..scanner.detector import detect_framework_signals
 
 
 class ConfigExtractor:
-    """从高价值配置文件中提取框架、入口和拓扑信号。"""
+    """Extract framework, entrypoint, and tooling signals from high-value config files."""
 
     def extract(self, candidate: FileCandidate) -> ConfigSummary | None:
-        """按配置文件类型分派不同的轻量解析逻辑。"""
+        """Route each supported config file type to its lightweight parser."""
 
         name = candidate.relative_path.name
         if name == "pyproject.toml":
@@ -33,7 +33,7 @@ class ConfigExtractor:
         return None
 
     def _extract_pyproject(self, candidate: FileCandidate) -> ConfigSummary:
-        """提取 Python 项目的依赖、入口和框架线索。"""
+        """Extract Python project dependencies, entrypoints, and framework signals."""
 
         raw_data = tomllib.loads(_candidate_text(candidate))
         data = _mapping_value(raw_data)
@@ -62,7 +62,7 @@ class ConfigExtractor:
         )
 
     def _extract_requirements(self, candidate: FileCandidate) -> ConfigSummary:
-        """提取 requirements.txt 中的框架信号。"""
+        """Extract framework signals from requirements.txt."""
 
         dependencies = _normalize_python_dependencies(_candidate_text(candidate).splitlines())
         framework_signals = detect_framework_signals(set(dependencies))
@@ -79,7 +79,10 @@ class ConfigExtractor:
 
 
 def _candidate_text(candidate: FileCandidate) -> str:
-    return candidate.content or ""
+    content = candidate.content or ""
+    if content.startswith("\ufeff"):
+        return content[1:]
+    return content
 
 
 def _mapping_value(value: object) -> dict[str, object]:
@@ -87,7 +90,7 @@ def _mapping_value(value: object) -> dict[str, object]:
 
 
 def _normalize_python_dependencies(values: object) -> list[str]:
-    """把版本表达式归一化为纯包名，便于做框架识别。"""
+    """Normalize versioned dependency expressions into plain package names."""
 
     if not isinstance(values, list):
         return []
@@ -106,7 +109,7 @@ def _normalize_python_dependencies(values: object) -> list[str]:
 
 
 def _extract_pyproject_entrypoints(project: dict[str, object]) -> list[str]:
-    """从 pyproject 的 scripts 区块提取入口点。"""
+    """Extract console entrypoints from the pyproject scripts table."""
 
     scripts = _mapping_value(project.get("scripts"))
     return sorted(
@@ -115,7 +118,7 @@ def _extract_pyproject_entrypoints(project: dict[str, object]) -> list[str]:
 
 
 def _extract_docker_entrypoints(content: str) -> list[str]:
-    """提取 Dockerfile 中声明的启动命令。"""
+    """Extract declared startup commands from Dockerfile content."""
 
     entrypoints: list[str] = []
     for line in content.splitlines():
@@ -126,7 +129,7 @@ def _extract_docker_entrypoints(content: str) -> list[str]:
 
 
 def _string_value(value: object) -> str:
-    """把可能的任意对象安全压缩成字符串。"""
+    """Safely coerce simple values into strings."""
 
     if isinstance(value, str):
         return value

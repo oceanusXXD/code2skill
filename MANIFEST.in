@@ -1,6 +1,8 @@
 include LICENSE
 include README.md
+include README.zh-CN.md
 include CHANGELOG.md
+recursive-include docs *.md
 recursive-include src/code2skill py.typed
 prune .code2skill
 prune tests

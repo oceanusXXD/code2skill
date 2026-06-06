@@ -1,6 +1,25 @@
 from __future__ import annotations
 
+from ..domain.adoption import AdoptionReadiness
 from ..domain.results import CommandRunSummary
+
+
+def render_adoption_readiness_lines(readiness: AdoptionReadiness) -> list[str]:
+    lines = [
+        f"command: doctor",
+        f"repo: {readiness.repo_path}",
+        f"output_dir: {readiness.output_dir}",
+        f"ready: {'true' if readiness.ready else 'false'}",
+        f"score: {readiness.score}",
+    ]
+    if readiness.target is not None:
+        lines.append(f"target: {readiness.target}")
+    for check in readiness.checks:
+        path = f" ({check.path})" if check.path is not None else ""
+        lines.append(f"check: {check.status} {check.name}{path} - {check.message}")
+    lines.extend(f"missing: {path}" for path in readiness.missing_paths)
+    lines.extend(f"next_step: {step}" for step in readiness.next_steps)
+    return lines
 
 
 def render_summary_lines(summary: CommandRunSummary) -> list[str]:

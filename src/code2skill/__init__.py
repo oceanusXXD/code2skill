@@ -8,11 +8,14 @@ from typing import Any
 from code2skill.version import __version__
 
 __all__ = [
+    "AdoptionCheck",
+    "AdoptionReadiness",
     "adapt_repository",
     "adapt_skills",
     "ArtifactLayout",
     "CommandRunSummary",
     "create_scan_config",
+    "doctor",
     "estimate",
     "ExecutionReport",
     "PricingConfig",
@@ -29,11 +32,14 @@ __all__ = [
 ]
 
 _LAZY_EXPORTS = {
+    "AdoptionCheck": (".domain", "AdoptionCheck"),
+    "AdoptionReadiness": (".domain", "AdoptionReadiness"),
     "adapt_repository": (".api", "adapt_repository"),
     "adapt_skills": (".adapt", "adapt_skills"),
     "ArtifactLayout": (".domain", "ArtifactLayout"),
     "CommandRunSummary": (".domain", "CommandRunSummary"),
     "create_scan_config": (".api", "create_scan_config"),
+    "doctor": (".api", "doctor"),
     "estimate": (".api", "estimate"),
     "ExecutionReport": (".models", "ExecutionReport"),
     "PricingConfig": (".config", "PricingConfig"),

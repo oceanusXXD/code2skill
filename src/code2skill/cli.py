@@ -6,8 +6,15 @@ import sys
 from typing import Sequence
 
 from code2skill.version import __version__
-from .application import run_adapt, run_ci, run_estimate, run_scan, summarize_execution
-from .product.cli_summary import render_summary_lines
+from .application import (
+    inspect_adoption,
+    run_adapt,
+    run_ci,
+    run_estimate,
+    run_scan,
+    summarize_execution,
+)
+from .product.cli_summary import render_adoption_readiness_lines, render_summary_lines
 
 
 USER_FACING_EXCEPTIONS = (
@@ -28,14 +35,15 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="code2skill",
         description=(
-            "Generate repository-aware Skills, structured project knowledge, "
-            "and AI rule files from real Python codebases."
+            "Compile Python repository knowledge into reviewable Skills, "
+            "incremental CI artifacts, and AI tool instruction files."
         ),
         epilog=(
             "Examples:\n"
             "  code2skill scan /path/to/repo --llm qwen --model qwen-plus-latest\n"
             "  code2skill ci /path/to/repo --mode auto --base-ref origin/main --llm qwen\n"
-            "  code2skill adapt /path/to/repo --target codex"
+            "  code2skill adapt /path/to/repo --target codex\n"
+            "  code2skill doctor /path/to/repo --target codex"
         ),
         formatter_class=HelpFormatter,
     )
@@ -110,6 +118,38 @@ def build_parser() -> argparse.ArgumentParser:
         help="Generated skills directory. Relative paths are resolved from repo_path.",
     )
 
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Check whether a repository is ready to use generated AI Skills.",
+        description=(
+            "Inspect the code2skill artifact bundle, generated Skills, incremental "
+            "state, and optional adapted target files without calling an LLM."
+        ),
+        formatter_class=HelpFormatter,
+    )
+    doctor_parser.add_argument(
+        "repo_path",
+        nargs="?",
+        default=".",
+        help="Repository root to inspect.",
+    )
+    doctor_parser.add_argument(
+        "--output-dir",
+        default=_env_str("CODE2SKILL_OUTPUT_DIR", ".code2skill"),
+        help="Output directory for generated artifacts.",
+    )
+    doctor_parser.add_argument(
+        "--target",
+        choices=("cursor", "claude", "codex", "copilot", "windsurf", "all"),
+        default=_env_optional("CODE2SKILL_TARGET"),
+        help="Optional adapted target to verify.",
+    )
+    doctor_parser.add_argument(
+        "--no-fail",
+        action="store_true",
+        help="Always exit 0 after printing readiness diagnostics.",
+    )
+
     return parser
 
 
@@ -138,6 +178,14 @@ def _run_command(
         )
         _print_command_summary(summary)
         return 0
+    if args.command == "doctor":
+        readiness = inspect_adoption(
+            repo_path=args.repo_path,
+            output_dir=args.output_dir,
+            target=args.target,
+        )
+        _print_adoption_readiness(readiness)
+        return 0 if readiness.ready or args.no_fail else 1
 
     config = _build_config(args)
 
@@ -272,6 +320,12 @@ def _build_config(args):
 def _print_command_summary(summary) -> None:
     print(f"code2skill {__version__}")
     for line in render_summary_lines(summary):
+        print(line)
+
+
+def _print_adoption_readiness(readiness) -> None:
+    print(f"code2skill {__version__}")
+    for line in render_adoption_readiness_lines(readiness):
         print(line)
 
 

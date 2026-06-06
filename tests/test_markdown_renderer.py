@@ -3,14 +3,35 @@ from __future__ import annotations
 from code2skill.models import (
     DirectorySummary,
     ProjectProfile,
+    SkillRecommendation,
     SkillBlueprint,
     SourceFileSummary,
 )
-from code2skill.renderers.markdown_renderer import render_project_summary
+from code2skill.renderers.markdown_renderer import render_adoption_guide, render_project_summary
 
 
 def test_project_summary_includes_directory_section_when_entrypoints_exist() -> None:
-    blueprint = SkillBlueprint(
+    blueprint = _sample_blueprint()
+
+    rendered = render_project_summary(blueprint)
+
+    assert "## Entrypoints" in rendered
+    assert "## Directory Summary" in rendered
+    assert "- src: 2 files;" in rendered
+
+
+def test_adoption_guide_explains_business_workflow_and_readiness_check() -> None:
+    rendered = render_adoption_guide(_sample_blueprint())
+
+    assert "# Adoption Guide" in rendered
+    assert "## Business Scenario" in rendered
+    assert "Run `code2skill estimate .`" in rendered
+    assert "Run `code2skill doctor . --target codex`" in rendered
+    assert "`backend`" in rendered
+
+
+def _sample_blueprint() -> SkillBlueprint:
+    return SkillBlueprint(
         project_profile=ProjectProfile(
             name="demo",
             repo_type="backend",
@@ -42,11 +63,15 @@ def test_project_summary_includes_directory_section_when_entrypoints_exist() -> 
         important_apis=[],
         abstract_rules=[],
         concrete_workflows=[],
-        recommended_skills=[],
+        recommended_skills=[
+            SkillRecommendation(
+                name="backend",
+                purpose="Explain backend boundaries",
+                scope="src",
+                source_evidence=["src/app.py"],
+                why_split="backend is the main area",
+                likely_inputs=["src/app.py"],
+                likely_outputs=["skills/backend.md"],
+            )
+        ],
     )
-
-    rendered = render_project_summary(blueprint)
-
-    assert "## Entrypoints" in rendered
-    assert "## Directory Summary" in rendered
-    assert "- src: 2 files;" in rendered

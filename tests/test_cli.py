@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 
 from code2skill.cli import _build_config, build_parser, main
+from code2skill.domain.adoption import AdoptionReadiness
 
 
 def test_scan_parser_defaults_repo_path_to_current_directory() -> None:
@@ -107,6 +108,14 @@ def test_invalid_environment_choice_falls_back_to_safe_default(monkeypatch) -> N
     assert args.llm == "openai"
 
 
+def test_doctor_parser_defaults_repo_path_to_current_directory() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["doctor"])
+
+    assert args.repo_path == "."
+    assert args.output_dir == ".code2skill"
+
+
 def test_adapt_command_resolves_repo_relative_source_dir(
     monkeypatch,
     tmp_path: Path,
@@ -136,6 +145,45 @@ def test_adapt_command_resolves_repo_relative_source_dir(
         "source_dir": (repo_path / ".code2skill" / "skills").resolve(),
         "destination_root": repo_path.resolve(),
     }
+
+
+def test_doctor_command_returns_nonzero_when_readiness_fails(
+    monkeypatch,
+    capsys,
+    tmp_path: Path,
+) -> None:
+    readiness = AdoptionReadiness(
+        repo_path=tmp_path,
+        output_dir=tmp_path / ".code2skill",
+        target="codex",
+        ready=False,
+        score=40,
+    )
+    monkeypatch.setattr("code2skill.cli.inspect_adoption", lambda **kwargs: readiness)
+
+    exit_code = main(["doctor", str(tmp_path), "--target", "codex"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "command: doctor" in captured.out
+    assert "ready: false" in captured.out
+    assert "score: 40" in captured.out
+
+
+def test_doctor_command_no_fail_keeps_zero_exit_for_diagnostics(
+    monkeypatch,
+    tmp_path: Path,
+) -> None:
+    readiness = AdoptionReadiness(
+        repo_path=tmp_path,
+        output_dir=tmp_path / ".code2skill",
+        target=None,
+        ready=False,
+        score=0,
+    )
+    monkeypatch.setattr("code2skill.cli.inspect_adoption", lambda **kwargs: readiness)
+
+    assert main(["doctor", str(tmp_path), "--no-fail"]) == 0
 
 
 def test_main_reports_user_facing_runtime_errors_cleanly(

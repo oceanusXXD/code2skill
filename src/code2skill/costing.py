@@ -12,8 +12,6 @@ from .models import (
 )
 
 
-# 这里的 cost 不是精确账单，而是稳定、可解释、可在 CI 中复现的工程估算。
-# 目的不是替代真实计费，而是让流水线在执行前先知道“量级大概是多少”。
 class CostEstimator:
     def __init__(self, pricing: PricingConfig) -> None:
         self.pricing = pricing
@@ -43,8 +41,8 @@ class CostEstimator:
             strategy="first_generation",
             per_skill=per_skill,
             assumptions=[
-                "假设每个推荐 skill 会单独调用一次下游 skill-creator。",
-                "假设每次调用都会携带共享中间产物，因此这是偏保守的上界估算。",
+                "Each recommended Skill is estimated as a separate downstream generation call.",
+                "Each call is assumed to include shared intermediate artifacts, so this is a conservative upper-bound estimate.",
             ],
         )
 
@@ -81,8 +79,8 @@ class CostEstimator:
             strategy="incremental_rewrite",
             per_skill=per_skill,
             assumptions=[
-                "假设增量更新会完整重写受影响的 skill，而不是只做局部补丁。",
-                "共享上下文只包含 references 与蓝图，不再重复完整仓库摘要。",
+                "Incremental rewrite mode assumes each affected Skill is fully rewritten rather than patched by section.",
+                "Shared context includes references and the blueprint, not the full repository summary.",
             ],
         )
 
@@ -108,8 +106,8 @@ class CostEstimator:
             strategy="incremental_patch",
             per_skill=per_skill,
             assumptions=[
-                "假设下游系统支持仅更新受影响 skill 的局部 section。",
-                "patch 模式按 rewrite 模式的 40% 成本进行启发式估算。",
+                "Patch mode assumes the downstream system can update only affected sections of an affected Skill.",
+                "Patch mode uses a heuristic 40% cost multiplier relative to rewrite mode.",
             ],
         )
 
@@ -240,7 +238,7 @@ class CostEstimator:
             output_chars=0,
             output_tokens=0,
             estimated_usd=0.0,
-            assumptions=["当前没有受影响的 skill，因此增量成本为 0。"],
+            assumptions=["No Skills are affected, so incremental cost is estimated as 0."],
             per_skill=[],
         )
 

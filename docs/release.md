@@ -10,9 +10,17 @@ Run the local validation gates before tagging a release:
 
 ```bash
 python -m pytest -q
-python -m build
+python -m build --sdist --wheel
 python -m twine check dist/*
 ```
+
+Check the currently published version before deciding whether to publish:
+
+```bash
+python -m pip index versions code2skill
+```
+
+Install the public package in an isolated environment when you need to compare the live PyPI experience against the local release candidate. The expected command list includes `scan`, `estimate`, `ci`, `adapt`, and `doctor`.
 
 ## Test-Version Rehearsal
 
@@ -33,15 +41,31 @@ python -m venv .venv-smoke
 . .venv-smoke/bin/activate
 pip install dist/code2skill-*.whl
 code2skill --help
-python -m code2skill --version
+code2skill --version
+python -m code2skill --help
+code2skill scan . --structure-only --output-dir .code2skill-smoke
+code2skill estimate . --output-dir .code2skill-smoke
+```
+
+Windows PowerShell smoke check:
+
+```powershell
+python -m venv .venv-smoke
+.\.venv-smoke\Scripts\Activate.ps1
+pip install (Get-ChildItem dist\code2skill-*.whl | Select-Object -First 1).FullName
+code2skill --help
+code2skill --version
+python -m code2skill --help
+code2skill scan . --structure-only --output-dir .code2skill-smoke
+code2skill estimate . --output-dir .code2skill-smoke
 ```
 
 ## Version Update
 
 When cutting a new release:
 
-1. Update `version` in `pyproject.toml`
-2. Update `__version__` in `src/code2skill/version.py`
+1. Update `__version__` in `src/code2skill/version.py`
+2. Keep `pyproject.toml` on the dynamic version source unless the build backend changes
 3. Add a new note in `docs/releases/`
 4. Update `CHANGELOG.md`
 
@@ -70,6 +94,16 @@ Recommended flow:
 4. manually run `Publish PyPI` from the same ref and provide the exact version string
 
 This keeps repository release automation and package publication separate.
+
+Before publishing, confirm the built artifacts are for one version only and that the PyPI long description renders cleanly:
+
+```powershell
+Remove-Item -Recurse -Force dist
+python -m build --sdist --wheel
+python -m twine check dist/*
+```
+
+On non-Windows shells, use `rm -rf dist` instead of `Remove-Item`.
 
 ## Manual Release Safety Notes
 

@@ -10,6 +10,7 @@ from code2skill.api import (
     _run_with_scan_config,
     adapt_repository,
     create_scan_config,
+    doctor,
     estimate,
     run_ci,
     scan,
@@ -299,6 +300,18 @@ def test_adapt_shortcut_resolves_relative_source_dir_from_repo_root(
     assert written == [(repo_path / "AGENTS.md").resolve()]
     assert (repo_path / "AGENTS.md").exists()
     assert not (tmp_path / "AGENTS.md").exists()
+
+
+def test_doctor_shortcut_returns_adoption_readiness(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    repo_path.mkdir()
+
+    readiness = doctor(repo_path=repo_path, target="codex")
+
+    assert readiness.repo_path == repo_path.resolve()
+    assert readiness.target == "codex"
+    assert readiness.ready is False
+    assert any(check.name == "target_codex" for check in readiness.checks)
 
 
 def test_get_target_definition_for_codex_has_agents_output() -> None:

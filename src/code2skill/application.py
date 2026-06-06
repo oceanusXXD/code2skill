@@ -12,6 +12,7 @@ from .workflows.requests import AdaptRequest
 
 if TYPE_CHECKING:
     from .config import ScanConfig
+    from .domain.adoption import AdoptionReadiness
     from .models import ScanExecution
 
 
@@ -60,6 +61,21 @@ def run_adapt(
         destination_root=request.destination_root,
     )
     return written_paths, summarize_adapt_result(request, written_paths)
+
+
+def inspect_adoption(
+    repo_path: Path | str = ".",
+    *,
+    output_dir: Path | str = ".code2skill",
+    target: str | None = None,
+) -> "AdoptionReadiness":
+    from .capabilities.adoption_service import inspect_adoption_readiness
+
+    return inspect_adoption_readiness(
+        repo_path=repo_path,
+        output_dir=output_dir,
+        target=target,
+    )
 
 
 def summarize_execution(command: str, result) -> CommandRunSummary:

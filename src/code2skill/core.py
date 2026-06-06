@@ -42,6 +42,7 @@ from .models import (
 )
 from .renderers.json_renderer import render_skill_blueprint
 from .renderers.markdown_renderer import (
+    render_adoption_guide,
     render_api_usage_reference,
     render_architecture_reference,
     render_code_style_reference,
@@ -740,6 +741,7 @@ def _render_outputs(blueprint: SkillBlueprint) -> dict[str, str]:
     """渲染所有对人和对机器可消费的中间产物。"""
 
     return {
+        "adoption-guide.md": render_adoption_guide(blueprint),
         "project-summary.md": render_project_summary(blueprint),
         "skill-blueprint.json": render_skill_blueprint(blueprint),
         "references/architecture.md": render_architecture_reference(blueprint),

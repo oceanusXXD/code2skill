@@ -5,8 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "code2skill"
 dynamic = ["version"]
-description = "Generate repository-aware Skills, blueprints, and AI rule files from real Python codebases."
-readme = "README.md"
+description = "Compile Python repository evidence into AI Skills and Codex/Cursor/Claude/GitHub Copilot instructions."
+readme = { file = "README.md", content-type = "text/markdown" }
 requires-python = ">=3.10"
 license = "Apache-2.0"
 license-files = ["LICENSE"]
@@ -16,7 +16,23 @@ authors = [
 dependencies = [
   "tomli>=2.0.1; python_version < '3.11'",
 ]
-keywords = ["python", "ai", "skills", "repository-analysis", "ai-agents", "developer-tools"]
+keywords = [
+  "python",
+  "ai",
+  "llm",
+  "skills",
+  "codex",
+  "cursor",
+  "claude-code",
+  "github-copilot",
+  "windsurf",
+  "repository-analysis",
+  "ai-agents",
+  "developer-tools",
+  "documentation",
+  "automation",
+  "ci",
+]
 classifiers = [
   "Development Status :: 3 - Alpha",
   "Environment :: Console",
@@ -27,9 +43,12 @@ classifiers = [
   "Programming Language :: Python :: 3.10",
   "Programming Language :: Python :: 3.11",
   "Programming Language :: Python :: 3.12",
+  "Topic :: Software Development :: Code Generators",
   "Topic :: Software Development :: Libraries :: Python Modules",
   "Topic :: Software Development :: Documentation",
+  "Topic :: Text Processing :: Markup :: Markdown",
   "Topic :: Utilities",
+  "Typing :: Typed",
 ]
 
 [project.urls]

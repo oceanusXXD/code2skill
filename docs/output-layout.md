@@ -1,13 +1,12 @@
 # Output Layout
 
-By default, `code2skill` writes artifacts under `.code2skill/` inside the target repository.
+By default, `code2skill` writes workflow artifacts under `.code2skill/` inside the target repository.
 
-This directory is the default artifact bundle root for the repository workflow. It groups the structural analysis outputs, planning outputs, generated Skills, diagnostics, and incremental state under one predictable location.
-
-Within this bundle, `code2skill` treats generated Skills as the final product layer. The other files remain important, but they are intermediate artifacts that support generation, review, reporting, and incremental CI refresh.
+This bundle separates final AI-facing Skill products from intermediate artifacts used for review, diagnostics, cost reporting, and incremental CI refresh.
 
 ```text
 .code2skill/
+  adoption-guide.md
   project-summary.md
   skill-blueprint.json
   skill-plan.json
@@ -26,31 +25,88 @@ Within this bundle, `code2skill` treats generated Skills as the final product la
 
 ## Artifact Roles
 
-### Final product artifacts
+### Final Product Artifacts
 
-- `skills/index.md` and `skills/*.md`: grounded AI-consumable Skill documents
+- `skills/index.md`: the generated Skill inventory.
+- `skills/*.md`: grounded AI-consumable Skill documents.
+- target files written by `adapt`, such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules`.
 
-### Intermediate artifacts
+### Review And Diagnostic Artifacts
 
-- `project-summary.md`: human-readable project overview
-- `skill-blueprint.json`: structural analysis output from Phase 1
-- `skill-plan.json`: LLM-planned Skill inventory
-- `report.json`: execution metrics, cost estimates, and impact summaries
-- `references/*.md`: supporting architectural and workflow references
-- `state/analysis-state.json`: incremental execution cache
+- `adoption-guide.md`: repository-specific adoption checklist and recommended next workflow.
+- `project-summary.md`: human-readable repository overview.
+- `skill-blueprint.json`: structural analysis output from Phase 1.
+- `skill-plan.json`: planned Skill inventory.
+- `references/*.md`: supporting architecture, style, workflow, and API references.
+- `report.json`: execution metrics, mode decisions, cost estimates, affected files, affected Skills, and artifact lists.
+- `state/analysis-state.json`: incremental execution cache.
 
-When `write_state` is enabled, both `report.json` accounting and `ScanExecution.output_files` include `state/analysis-state.json` in this intermediate layer.
+## Artifacts By Command
 
-In product terms, `.code2skill/` is the workspace-local artifact bundle. The final repository-local product is the generated Skill set, while `adapt` publishes that Skill layer into the repository locations where each AI tool expects to read it.
+| Command | Writes `.code2skill/` | Writes Skills | Writes state | Writes target files | Typical use |
+|---|---:|---:|---:|---:|---|
+| `scan --structure-only` | Yes | No | Yes | No | No-LLM structural smoke check |
+| `scan` | Yes | Yes | Yes | No | Full local generation |
+| `estimate` | `report.json` only | No | No | No | Cost and impact preview |
+| `ci --structure-only` | Yes | No | Yes | No | No-LLM CI sanity check |
+| `ci` | Yes | Yes, when full or affected | Yes | No | Automated refresh |
+| `adapt` | No | No | No | Yes | Publish generated Skills to AI tools |
+| `doctor` | No | No | No | No | Validate readiness |
+
+## What To Commit
+
+For a team adopting `code2skill`, usually commit:
+
+- `.code2skill/adoption-guide.md`
+- `.code2skill/skills/index.md`
+- `.code2skill/skills/*.md`
+- adapted target files used by the team, such as `AGENTS.md`
+
+Depending on your review policy, you may also commit:
+
+- `.code2skill/project-summary.md`
+- `.code2skill/references/*.md`
+- `.code2skill/report.json`
+- `.code2skill/skill-plan.json`
+
+Treat `.code2skill/state/analysis-state.json` as a cache. Commit it only if you want deterministic incremental reuse from a shared baseline; otherwise cache it in CI.
 
 ## Adapted Outputs
 
-The `adapt` command writes target-specific files under the repository root:
+`adapt` writes target-specific files under the repository root, not inside `.code2skill/`.
 
-- `AGENTS.md`
-- `CLAUDE.md`
-- `.cursor/rules/*`
-- `.github/copilot-instructions.md`
-- `.windsurfrules`
+| Target | Output | Mode |
+|---|---|---|
+| `codex` | `AGENTS.md` | managed block merge |
+| `claude` | `CLAUDE.md` | managed block merge |
+| `cursor` | `.cursor/rules/*.md` and `.cursor/rules/.code2skill-manifest.json` | manifest-tracked file copy |
+| `copilot` | `.github/copilot-instructions.md` | managed block merge |
+| `windsurf` | `.windsurfrules` | managed block merge |
+| `all` | all of the above | mixed |
 
-These files are not written into `.code2skill/`; they are written where the target tool expects to read them.
+Merge targets preserve hand-written content outside the generated block:
+
+```text
+<!-- code2skill:start -->
+generated Skill content
+<!-- code2skill:end -->
+```
+
+Copy targets use `.code2skill-manifest.json` to track files written by `code2skill`. Later `adapt` runs update current generated Skills and remove stale manifest-tracked Markdown files without deleting unmanaged team rules.
+
+## Readiness Validation
+
+Run:
+
+```bash
+code2skill doctor . --target codex
+```
+
+`doctor` verifies that:
+
+- bundle files are present
+- `report.json` is valid and referenced artifacts exist
+- `skill-plan.json` maps to generated Skill files
+- `skills/index.md` links resolve
+- state belongs to the same repository root
+- the requested adapted target file exists and contains the managed block or copied Skills

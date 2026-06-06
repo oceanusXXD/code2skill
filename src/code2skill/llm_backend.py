@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from typing import Protocol
 from urllib import error, request
 
+from .version import __version__
+
 
 class LLMBackend(Protocol):
     def complete(self, prompt: str, system: str | None = None) -> str: ...
@@ -15,6 +17,7 @@ class LLMBackend(Protocol):
 class OpenAIBackend:
     model: str = "gpt-4o-mini"
     api_key: str | None = None
+    base_url: str | None = None
 
     def complete(self, prompt: str, system: str | None = None) -> str:
         payload: dict[str, object] = {
@@ -24,7 +27,7 @@ class OpenAIBackend:
         if system:
             payload["instructions"] = system
         data = _post_json(
-            url="https://api.openai.com/v1/responses",
+            url=self._responses_url(),
             headers={
                 "Authorization": f"Bearer {self._api_key()}",
             },
@@ -49,10 +52,27 @@ class OpenAIBackend:
         raise RuntimeError("OpenAI response did not contain text output.")
 
     def _api_key(self) -> str:
-        api_key = self.api_key or os.getenv("OPENAI_API_KEY")
+        api_key = (
+            self.api_key
+            or os.getenv("CODE2SKILL_OPENAI_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+        )
         if not api_key:
-            raise RuntimeError("OPENAI_API_KEY is required for the OpenAI backend.")
+            raise RuntimeError(
+                "CODE2SKILL_OPENAI_API_KEY or OPENAI_API_KEY is required for the OpenAI backend."
+            )
         return api_key
+
+    def _responses_url(self) -> str:
+        base_url = (
+            self.base_url
+            or os.getenv("CODE2SKILL_OPENAI_BASE_URL")
+            or os.getenv("OPENAI_BASE_URL")
+            or "https://api.openai.com/v1"
+        ).strip().rstrip("/")
+        if base_url.endswith("/responses"):
+            return base_url
+        return f"{base_url}/responses"
 
 
 @dataclass(frozen=True)
@@ -174,6 +194,7 @@ def _post_json(
         data=json.dumps(payload).encode("utf-8"),
         headers={
             "Content-Type": "application/json",
+            "User-Agent": f"code2skill/{__version__}",
             **headers,
         },
         method="POST",

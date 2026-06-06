@@ -3,6 +3,64 @@ from __future__ import annotations
 from ..models import SkillBlueprint
 
 
+def render_adoption_guide(blueprint: SkillBlueprint) -> str:
+    profile = blueprint.project_profile
+    lines = [
+        "# Adoption Guide",
+        "",
+        "## Business Scenario",
+        (
+            f"This repository is classified as a `{profile.repo_type}` Python project. "
+            "Use the generated Skill layer as the shared AI-facing repository context "
+            "for local agents, IDE assistants, and CI automation."
+        ),
+        "",
+        "## Intended Users",
+        "- Repository maintainers who want AI assistants to follow current project boundaries.",
+        "- DevEx or platform owners standardizing AI coding tool instructions across a team.",
+        "- Teams that need reviewable, commit-friendly repository knowledge instead of chat history.",
+        "",
+        "## First Adoption Workflow",
+        "1. Run `code2skill estimate .` to preview selected files, impact, and generation cost.",
+        "2. Run `code2skill scan . --llm <provider> --model <model>` to generate Skills.",
+        "3. Review `.code2skill/skills/index.md` and `.code2skill/skills/*.md`.",
+        "4. Run `code2skill adapt . --target codex` or `--target all` to publish tool-specific files.",
+        "5. Run `code2skill doctor . --target codex` to confirm the bundle is ready to use.",
+        "",
+        "## What To Review",
+        "- `.code2skill/adoption-guide.md`: this adoption checklist.",
+        "- `.code2skill/project-summary.md`: human-readable repository summary.",
+        "- `.code2skill/skills/index.md` and `.code2skill/skills/*.md`: final AI-facing Skill products.",
+        "- `.code2skill/report.json`: selected files, mode decisions, costs, and affected Skills.",
+        "- Adapted target files such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules`.",
+        "",
+        "## Repository Signals",
+        f"- name: {profile.name}",
+        f"- repo_type: {profile.repo_type}",
+        f"- package_topology: {profile.package_topology}",
+        f"- languages: {', '.join(profile.languages) or 'unknown'}",
+        f"- entrypoints: {', '.join(profile.entrypoints[:8]) or 'none detected'}",
+        "",
+        "## Recommended Skill Products",
+    ]
+    if blueprint.recommended_skills:
+        for skill in blueprint.recommended_skills:
+            lines.append(f"- `{skill.name}`: {skill.purpose}")
+    else:
+        lines.append("- No recommended Skills were inferred during structural analysis.")
+    lines.extend(
+        [
+            "",
+            "## CI Maintenance",
+            "Use `code2skill ci . --mode auto --base-ref origin/main --head-ref HEAD` after the first committed bundle. Cache `.code2skill/` so later CI runs can reuse `state/analysis-state.json` and regenerate only affected Skills.",
+            "",
+            "## Readiness Check",
+            "Run `code2skill doctor . --target codex` before committing or from CI to verify that the artifact bundle, generated Skills, incremental state, and adapted target file are present.",
+        ]
+    )
+    return "\n".join(lines) + "\n"
+
+
 def render_project_summary(blueprint: SkillBlueprint) -> str:
     profile = blueprint.project_profile
     lines = [

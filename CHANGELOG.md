@@ -5,6 +5,16 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 
 ## Unreleased
 
+- Added `doctor` readiness checks for generated bundles, Skill plans, state snapshots, and adapted target files.
+- Added repository-specific `adoption-guide.md` output and updated README/docs around first adoption, CI refresh, and multi-tool publishing workflows.
+- Changed merge-style adapters to preserve hand-written content through a managed code2skill block.
+- Added Cursor copy-target manifest cleanup so stale generated rules are removed while unmanaged team rules are preserved.
+- Added OpenAI-compatible Responses endpoint configuration through `CODE2SKILL_OPENAI_BASE_URL`.
+- Improved Skill planning and writing prompts to avoid documentation/packaging-only pseudo-skills and produce more maintainer-oriented guidance.
+- Improved PyPI-facing README content, package metadata, and sdist documentation inclusion.
+- Fixed cost-estimate assumption text that rendered as mojibake in CLI/report output.
+- Fixed incremental generation to replan when affected Skills are missing from the existing plan.
+
 ## v0.1.7
 
 - Release notes: [docs/releases/v0.1.7.md](./docs/releases/v0.1.7.md)
