@@ -23,9 +23,16 @@ evidence for planning and Skill generation.
 - Import graph construction uses detailed `ImportInfo`, including `from ...
   import ...` names and dynamic imports, so package-level imports resolve to
   concrete internal files when possible.
+- Symbol-aware dependency resolution maps extracted call targets, instantiated
+  classes, type references, decorators, and raised exceptions back to internal
+  files when they match an imported alias, a package re-export, or a unique
+  repository symbol.
 - File priority combines path heuristics with content evidence. Route, service,
   model, main-guard, call-target, type-reference, and data-flow signals can
   raise selection priority.
+- Evidence coverage is summarized in the blueprint and project summary so users
+  can see how many source files, symbols, routes, calls, types, flows, dynamic
+  imports, exceptions, and dependency edges were captured.
 - Planner prompts receive dependency, call, type, and flow evidence for core
   modules. Generation prompts use the same skeleton lines when large files are
   summarized instead of inlined.
@@ -36,7 +43,8 @@ The extractor is deliberately conservative. It records shallow data-flow edges
 from assignments, loops, and context managers, but it does not attempt full
 interprocedural static analysis, control-flow reconstruction, type inference, or
 runtime import evaluation. Missing or ambiguous evidence should still be marked
-as uncertain by generated Skills.
+as uncertain by generated Skills. Plain symbol references are linked only when
+the symbol is unique in the repository or tied to an import alias/re-export.
 
 ## References
 

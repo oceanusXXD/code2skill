@@ -8,6 +8,7 @@ from ..models import (
     ConfigSummary,
     DirectorySummary,
     DomainSummary,
+    EvidenceCoverage,
     ImportGraphStats,
     ProjectProfile,
     RuleSummary,
@@ -53,6 +54,10 @@ class SkillBlueprintBuilder:
             concrete_workflows,
             source_summaries,
         )
+        evidence_coverage = self._build_evidence_coverage(
+            source_summaries=source_summaries,
+            import_graph_stats=import_graph_stats,
+        )
 
         return SkillBlueprint(
             project_profile=profile,
@@ -65,6 +70,7 @@ class SkillBlueprintBuilder:
             abstract_rules=abstract_rules,
             concrete_workflows=concrete_workflows,
             recommended_skills=recommended_skills,
+            evidence_coverage=evidence_coverage,
             import_graph_stats=import_graph_stats,
         )
 
@@ -273,6 +279,44 @@ class SkillBlueprintBuilder:
             deduped.append(recommendation)
         return deduped[:8]
 
+    def _build_evidence_coverage(
+        self,
+        *,
+        source_summaries: list[SourceFileSummary],
+        import_graph_stats: ImportGraphStats | None,
+    ) -> EvidenceCoverage:
+        internal_dependency_count = (
+            import_graph_stats.total_internal_edges
+            if import_graph_stats is not None
+            else sum(len(summary.internal_dependencies) for summary in source_summaries)
+        )
+        return EvidenceCoverage(
+            source_file_count=len(source_summaries),
+            high_signal_file_count=sum(
+                1 for summary in source_summaries if _has_high_signal(summary)
+            ),
+            class_count=sum(len(summary.classes) for summary in source_summaries),
+            function_count=sum(len(summary.functions) for summary in source_summaries),
+            route_count=sum(len(summary.routes) for summary in source_summaries),
+            call_target_count=sum(len(summary.call_targets) for summary in source_summaries),
+            type_reference_count=sum(
+                len(summary.type_references) for summary in source_summaries
+            ),
+            data_flow_edge_count=sum(
+                len(summary.data_flow_edges) for summary in source_summaries
+            ),
+            dynamic_import_count=sum(
+                len(summary.dynamic_imports) for summary in source_summaries
+            ),
+            raised_exception_count=sum(
+                len(summary.raised_exceptions) for summary in source_summaries
+            ),
+            model_or_schema_count=sum(
+                len(summary.models_or_schemas) for summary in source_summaries
+            ),
+            internal_dependency_count=internal_dependency_count,
+        )
+
 
 def _evidence_for_roles(source_summaries: list[SourceFileSummary], roles: set[str]) -> list[str]:
     """为角色型 skill 收集核心证据路径。"""
@@ -316,4 +360,19 @@ def _core_module_sort_key(summary: SourceFileSummary) -> tuple[int, float, int, 
         -symbol_count,
         summary.path.count("/"),
         summary.path,
+    )
+
+
+def _has_high_signal(summary: SourceFileSummary) -> bool:
+    return any(
+        [
+            summary.routes,
+            summary.call_targets,
+            summary.type_references,
+            summary.data_flow_edges,
+            summary.dynamic_imports,
+            summary.raised_exceptions,
+            summary.models_or_schemas,
+            summary.internal_dependencies,
+        ]
     )

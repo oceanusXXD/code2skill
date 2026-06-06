@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from code2skill.models import (
     DirectorySummary,
+    EvidenceCoverage,
     ProjectProfile,
     SkillRecommendation,
     SkillBlueprint,
@@ -16,6 +17,9 @@ def test_project_summary_includes_directory_section_when_entrypoints_exist() -> 
     rendered = render_project_summary(blueprint)
 
     assert "## Entrypoints" in rendered
+    assert "## Evidence Coverage" in rendered
+    assert "high_signal_files: 1/1" in rendered
+    assert "internal_dependencies=2" in rendered
     assert "## Directory Summary" in rendered
     assert "- src: 2 files;" in rendered
 
@@ -74,4 +78,18 @@ def _sample_blueprint() -> SkillBlueprint:
                 likely_outputs=["skills/backend.md"],
             )
         ],
+        evidence_coverage=EvidenceCoverage(
+            source_file_count=1,
+            high_signal_file_count=1,
+            class_count=0,
+            function_count=1,
+            route_count=0,
+            call_target_count=2,
+            type_reference_count=0,
+            data_flow_edge_count=0,
+            dynamic_import_count=0,
+            raised_exception_count=0,
+            model_or_schema_count=0,
+            internal_dependency_count=2,
+        ),
     )

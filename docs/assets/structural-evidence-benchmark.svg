@@ -17,13 +17,13 @@
 <line x1="820.0" y1="78" x2="820.0" y2="252" stroke="#eef0f3"/>
 <text x="812.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">1.0</text>
 <text x="36" y="111" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">Path-only baseline</text>
-<rect x="210" y="88" width="29.0" height="34" rx="4" fill="#8a8f98"/>
-<text x="249.0" y="111" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.048 (2/42)</text>
+<rect x="210" y="88" width="27.1" height="34" rx="4" fill="#8a8f98"/>
+<text x="247.1" y="111" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.044 (2/45)</text>
 <text x="36" y="163" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">AST symbols baseline</text>
-<rect x="210" y="140" width="217.9" height="34" rx="4" fill="#3f6d8f"/>
-<text x="437.9" y="163" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.357 (15/42)</text>
+<rect x="210" y="140" width="216.9" height="34" rx="4" fill="#3f6d8f"/>
+<text x="436.9" y="163" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.356 (16/45)</text>
 <text x="36" y="215" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">code2skill semantic</text>
 <rect x="210" y="192" width="610.0" height="34" rx="4" fill="#198754"/>
-<text x="830.0" y="215" font-family="Arial, sans-serif" font-size="13" fill="#111827">1.000 (42/42)</text>
-<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, exceptions, and internal dependency edges.</text>
+<text x="830.0" y="215" font-family="Arial, sans-serif" font-size="13" fill="#111827">1.000 (45/45)</text>
+<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, re-exported symbols, exceptions, and dependency edges.</text>
 </svg>

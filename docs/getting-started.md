@@ -32,6 +32,10 @@ Expected files include:
 - `.code2skill/report.json`
 - `.code2skill/state/analysis-state.json`
 
+Open `.code2skill/project-summary.md` first. Its evidence coverage section shows
+whether the scan captured routes, calls, type references, data-flow edges,
+dynamic imports, exceptions, and internal dependency edges before any LLM call.
+
 ## 3. Preview Cost And Impact
 
 ```bash

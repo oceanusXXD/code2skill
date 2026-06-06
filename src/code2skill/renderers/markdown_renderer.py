@@ -73,6 +73,9 @@ def render_project_summary(blueprint: SkillBlueprint) -> str:
         f"- languages: {', '.join(profile.languages) or 'unknown'}",
         f"- framework_signals: {', '.join(profile.framework_signals) or 'none'}",
         "",
+        "## Evidence Coverage",
+        *_render_evidence_coverage(blueprint),
+        "",
         "## Entrypoints",
     ]
     entrypoints = profile.entrypoints[:10]
@@ -240,3 +243,37 @@ def _confidence_badge(confidence: float) -> str:
     if confidence >= 0.5:
         return "[medium]"
     return "[low]"
+
+
+def _render_evidence_coverage(blueprint: SkillBlueprint) -> list[str]:
+    coverage = blueprint.evidence_coverage
+    if coverage is None:
+        return ["- not available"]
+
+    return [
+        (
+            "- source_files: "
+            f"{coverage.source_file_count}; "
+            "high_signal_files: "
+            f"{coverage.high_signal_file_count}/{coverage.source_file_count}"
+        ),
+        (
+            "- symbols: "
+            f"classes={coverage.class_count}; "
+            f"functions={coverage.function_count}; "
+            f"models_or_schemas={coverage.model_or_schema_count}"
+        ),
+        (
+            "- behavior: "
+            f"routes={coverage.route_count}; "
+            f"calls={coverage.call_target_count}; "
+            f"types={coverage.type_reference_count}; "
+            f"data_flows={coverage.data_flow_edge_count}"
+        ),
+        (
+            "- runtime: "
+            f"dynamic_imports={coverage.dynamic_import_count}; "
+            f"raises={coverage.raised_exception_count}; "
+            f"internal_dependencies={coverage.internal_dependency_count}"
+        ),
+    ]

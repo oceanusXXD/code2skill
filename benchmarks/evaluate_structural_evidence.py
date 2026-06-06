@@ -83,7 +83,7 @@ def run_benchmark() -> dict[str, object]:
         "baselines": [
             "path-only: file path and suffix role inference",
             "ast-symbols: standard AST imports, classes, functions, and methods",
-            "code2skill-semantic: AST symbols plus routes, calls, type references, data-flow edges, dynamic imports, raised exceptions, and internal dependency resolution",
+            "code2skill-semantic: AST symbols plus routes, calls, type references, data-flow edges, dynamic imports, raised exceptions, re-exported symbols, and internal dependency resolution",
         ],
         "scope": (
             "This benchmark measures repository evidence extraction before any LLM call. "
@@ -236,7 +236,7 @@ def render_svg(report: dict[str, object]) -> str:
             f'<text x="{left + bar_width + 10:.1f}" y="{y + 23}" font-family="Arial, sans-serif" font-size="13" fill="#111827">{value:.3f} ({result["gold_hits"]}/{result["gold_total"]})</text>'
         )
     lines.append(
-        '<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, exceptions, and internal dependency edges.</text>'
+        '<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, re-exported symbols, exceptions, and dependency edges.</text>'
     )
     lines.append("</svg>")
     return "\n".join(lines)
@@ -246,7 +246,8 @@ def gold_facts() -> list[str]:
     return [
         "role:src/shop/main.py:entrypoint",
         "role:src/shop/api/users.py:route",
-        "import:src/shop/api/users.py:shop.core.ops",
+        "import:src/shop/__init__.py:shop.core.ops",
+        "import:src/shop/api/users.py:shop",
         "class:src/shop/core/ops.py:UserService",
         "class:src/shop/domain/accounts.py:AccountCreate",
         "class:src/shop/domain/accounts.py:AccountRecord",
@@ -259,6 +260,8 @@ def gold_facts() -> list[str]:
         "type:src/shop/core/ops.py:AccountRecord",
         "model:src/shop/domain/accounts.py:AccountCreate",
         "model:src/shop/domain/accounts.py:AccountRecord",
+        "dependency:src/shop/__init__.py->src/shop/core/ops.py",
+        "dependency:src/shop/api/users.py->src/shop/__init__.py",
         "dependency:src/shop/api/users.py->src/shop/core/ops.py",
         "dependency:src/shop/api/users.py->src/shop/domain/accounts.py",
         "dependency:src/shop/core/ops.py->src/shop/domain/accounts.py",
@@ -291,6 +294,9 @@ def gold_facts() -> list[str]:
 
 def write_fixture_repo(repo_path: Path) -> None:
     files = {
+        "src/shop/__init__.py": """
+            from shop.core.ops import UserService
+        """,
         "src/shop/main.py": """
             from fastapi import FastAPI
             from shop.api.users import router
@@ -300,7 +306,7 @@ def write_fixture_repo(repo_path: Path) -> None:
         """,
         "src/shop/api/users.py": """
             from fastapi import APIRouter
-            from shop.core.ops import UserService
+            from shop import UserService
             from shop.domain.accounts import AccountCreate
 
             router = APIRouter()

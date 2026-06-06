@@ -49,11 +49,11 @@
 
 | 方法 | Gold evidence recall |
 |---|---:|
-| Path-only baseline | 0.048 |
-| AST symbols baseline | 0.357 |
+| Path-only baseline | 0.044 |
+| AST symbols baseline | 0.356 |
 | code2skill semantic scanner | 1.000 |
 
-Gold set 覆盖 route decorators、service calls、type references、data-flow edges、dynamic imports、raised exceptions、main guards 和 internal dependency edges。复现命令：
+Gold set 覆盖 route decorators、service calls、type references、data-flow edges、dynamic imports、re-exported symbol dependencies、raised exceptions、main guards 和 internal dependency edges。复现命令：
 
 ```bash
 python benchmarks/evaluate_structural_evidence.py
@@ -179,8 +179,8 @@ code2skill scan .
 | 路径 | 用途 |
 |---|---|
 | `adoption-guide.md` | 仓库级采用 checklist 和下一步工作流 |
-| `project-summary.md` | 面向人的仓库概要 |
-| `skill-blueprint.json` | 结构化仓库蓝图 |
+| `project-summary.md` | 面向人的仓库概要，包含 evidence coverage 和 import graph 信号 |
+| `skill-blueprint.json` | 结构化仓库蓝图，包含证据计数和依赖图统计 |
 | `skill-plan.json` | 模型规划出的 Skill 清单 |
 | `references/*.md` | 架构、风格、工作流和 API 参考 |
 | `skills/index.md` | 生成的 Skill 索引 |

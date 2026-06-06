@@ -1,14 +1,14 @@
 {
   "name": "structural-evidence-extraction",
-  "generated_at": "2026-06-06T15:49:31.523360+00:00",
-  "gold_total": 42,
+  "generated_at": "2026-06-06T16:13:09.683771+00:00",
+  "gold_total": 45,
   "results": [
     {
       "method": "path-only",
-      "facts_found": 10,
+      "facts_found": 11,
       "gold_hits": 2,
-      "gold_total": 42,
-      "recall": 0.047619047619047616,
+      "gold_total": 45,
+      "recall": 0.044444444444444446,
       "hit_facts": [
         "role:src/shop/api/users.py:route",
         "role:src/shop/main.py:entrypoint"
@@ -31,6 +31,8 @@
         "data_flow:src/tool/runner.py:run:state<-load_state",
         "dependency:src/app/bootstrap.py->src/app/runtime/loader.py",
         "dependency:src/app/runtime/loader.py->src/app/plugins/audit.py",
+        "dependency:src/shop/__init__.py->src/shop/core/ops.py",
+        "dependency:src/shop/api/users.py->src/shop/__init__.py",
         "dependency:src/shop/api/users.py->src/shop/core/ops.py",
         "dependency:src/shop/api/users.py->src/shop/domain/accounts.py",
         "dependency:src/shop/core/ops.py->src/shop/domain/accounts.py",
@@ -43,7 +45,8 @@
         "function:src/tool/runner.py:run",
         "function:src/tool/state_store.py:load_state",
         "import:src/app/runtime/loader.py:importlib",
-        "import:src/shop/api/users.py:shop.core.ops",
+        "import:src/shop/__init__.py:shop.core.ops",
+        "import:src/shop/api/users.py:shop",
         "main_guard:src/tool/runner.py",
         "method:src/app/plugins/audit.py:AuditPlugin.record",
         "method:src/shop/core/ops.py:UserService.create",
@@ -58,10 +61,10 @@
     },
     {
       "method": "ast-symbols",
-      "facts_found": 25,
-      "gold_hits": 15,
-      "gold_total": 42,
-      "recall": 0.35714285714285715,
+      "facts_found": 26,
+      "gold_hits": 16,
+      "gold_total": 45,
+      "recall": 0.35555555555555557,
       "hit_facts": [
         "class:src/app/plugins/audit.py:AuditPlugin",
         "class:src/shop/core/ops.py:UserService",
@@ -74,7 +77,8 @@
         "function:src/tool/runner.py:run",
         "function:src/tool/state_store.py:load_state",
         "import:src/app/runtime/loader.py:importlib",
-        "import:src/shop/api/users.py:shop.core.ops",
+        "import:src/shop/__init__.py:shop.core.ops",
+        "import:src/shop/api/users.py:shop",
         "method:src/app/plugins/audit.py:AuditPlugin.record",
         "method:src/shop/core/ops.py:UserService.create",
         "method:src/tool/actions.py:ReleaseService.publish"
@@ -92,6 +96,8 @@
         "data_flow:src/tool/runner.py:run:state<-load_state",
         "dependency:src/app/bootstrap.py->src/app/runtime/loader.py",
         "dependency:src/app/runtime/loader.py->src/app/plugins/audit.py",
+        "dependency:src/shop/__init__.py->src/shop/core/ops.py",
+        "dependency:src/shop/api/users.py->src/shop/__init__.py",
         "dependency:src/shop/api/users.py->src/shop/core/ops.py",
         "dependency:src/shop/api/users.py->src/shop/domain/accounts.py",
         "dependency:src/shop/core/ops.py->src/shop/domain/accounts.py",
@@ -111,9 +117,9 @@
     },
     {
       "method": "code2skill-semantic",
-      "facts_found": 85,
-      "gold_hits": 42,
-      "gold_total": 42,
+      "facts_found": 91,
+      "gold_hits": 45,
+      "gold_total": 45,
       "recall": 1.0,
       "hit_facts": [
         "call:src/app/bootstrap.py:load_plugin",
@@ -133,6 +139,8 @@
         "data_flow:src/tool/runner.py:run:state<-load_state",
         "dependency:src/app/bootstrap.py->src/app/runtime/loader.py",
         "dependency:src/app/runtime/loader.py->src/app/plugins/audit.py",
+        "dependency:src/shop/__init__.py->src/shop/core/ops.py",
+        "dependency:src/shop/api/users.py->src/shop/__init__.py",
         "dependency:src/shop/api/users.py->src/shop/core/ops.py",
         "dependency:src/shop/api/users.py->src/shop/domain/accounts.py",
         "dependency:src/shop/core/ops.py->src/shop/domain/accounts.py",
@@ -145,7 +153,8 @@
         "function:src/tool/runner.py:run",
         "function:src/tool/state_store.py:load_state",
         "import:src/app/runtime/loader.py:importlib",
-        "import:src/shop/api/users.py:shop.core.ops",
+        "import:src/shop/__init__.py:shop.core.ops",
+        "import:src/shop/api/users.py:shop",
         "main_guard:src/tool/runner.py",
         "method:src/app/plugins/audit.py:AuditPlugin.record",
         "method:src/shop/core/ops.py:UserService.create",
@@ -165,7 +174,7 @@
   "baselines": [
     "path-only: file path and suffix role inference",
     "ast-symbols: standard AST imports, classes, functions, and methods",
-    "code2skill-semantic: AST symbols plus routes, calls, type references, data-flow edges, dynamic imports, raised exceptions, and internal dependency resolution"
+    "code2skill-semantic: AST symbols plus routes, calls, type references, data-flow edges, dynamic imports, raised exceptions, re-exported symbols, and internal dependency resolution"
   ],
   "scope": "This benchmark measures repository evidence extraction before any LLM call. It does not claim end-to-end SWE-bench issue resolution."
 }

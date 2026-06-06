@@ -7,6 +7,7 @@ from code2skill.models import (
     ConfigSummary,
     DirectorySummary,
     DomainSummary,
+    EvidenceCoverage,
     ImportGraphCluster,
     ImportGraphStats,
     ProjectProfile,
@@ -138,6 +139,10 @@ def test_blueprint_builder_uses_nested_directories_and_core_module_evidence() ->
     assert core_paths[0] == "src/code2skill/cli.py"
     assert "src/code2skill/core.py" in core_paths
     assert "src/code2skill/scanner/repository.py" in core_paths
+    assert blueprint.evidence_coverage is not None
+    assert blueprint.evidence_coverage.source_file_count == 4
+    assert blueprint.evidence_coverage.function_count == 4
+    assert blueprint.evidence_coverage.internal_dependency_count == 3
 
 
 def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
@@ -188,6 +193,8 @@ def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
 
     prompt = str(backend.calls[0]["prompt"])
     assert "Key configuration:" in prompt
+    assert "Evidence coverage:" in prompt
+    assert "high_signal_files: 2/2" in prompt
     assert "Dependency summary:" in prompt
     assert "Heuristic recommendations (low-priority reference, do not follow blindly):" in prompt
     assert "Prefer package boundaries, directory boundaries, dependency clusters, call/type/data-flow evidence, and stable workflows over generic labels." in prompt
@@ -456,6 +463,20 @@ def _sample_blueprint() -> SkillBlueprint:
             )
         ],
         recommended_skills=[],
+        evidence_coverage=EvidenceCoverage(
+            source_file_count=2,
+            high_signal_file_count=2,
+            class_count=1,
+            function_count=2,
+            route_count=0,
+            call_target_count=1,
+            type_reference_count=0,
+            data_flow_edge_count=0,
+            dynamic_import_count=0,
+            raised_exception_count=0,
+            model_or_schema_count=0,
+            internal_dependency_count=2,
+        ),
         import_graph_stats=ImportGraphStats(
             total_internal_edges=2,
             hub_files=["src/code2skill/core.py"],

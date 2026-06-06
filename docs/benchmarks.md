@@ -13,6 +13,8 @@ to the context-selection and evidence-extraction layer that `code2skill` owns.
   https://arxiv.org/abs/2310.06770
 - RepoBench evaluates repository-level context for code completion:
   https://arxiv.org/abs/2306.03091
+- CrossCodeEval evaluates cross-file code completion across multiple languages:
+  https://arxiv.org/abs/2310.11248
 - CodeSearchNet evaluates semantic code search and retrieval quality:
   https://arxiv.org/abs/1909.09436
 
@@ -33,9 +35,10 @@ Outputs:
 - `benchmarks/results/structural-evidence-benchmark.json`
 - `docs/assets/structural-evidence-benchmark.svg`
 
-The fixture repository contains Python route, service, schema, dynamic plugin,
-runtime loader, main-guard, state, and exception-handling examples. The gold set
-contains 42 structural facts that are useful for writing grounded Skills:
+The fixture repository contains Python route, service, schema, package
+re-export, dynamic plugin, runtime loader, main-guard, state, and
+exception-handling examples. The gold set contains 45 structural facts that are
+useful for writing grounded Skills:
 
 - file roles
 - imports and internal dependency edges
@@ -44,6 +47,7 @@ contains 42 structural facts that are useful for writing grounded Skills:
 - service calls and call chains
 - type references
 - model/schema signals
+- re-exported symbol dependencies
 - dynamic imports
 - data-flow edges
 - raised exceptions
@@ -65,9 +69,9 @@ dependency edges.
 
 | Method | Gold hits | Gold total | Recall |
 |---|---:|---:|---:|
-| path-only | 2 | 42 | 0.048 |
-| ast-symbols | 15 | 42 | 0.357 |
-| code2skill-semantic | 42 | 42 | 1.000 |
+| path-only | 2 | 45 | 0.044 |
+| ast-symbols | 16 | 45 | 0.356 |
+| code2skill-semantic | 45 | 45 | 1.000 |
 
 ![Structural evidence benchmark](assets/structural-evidence-benchmark.svg)
 

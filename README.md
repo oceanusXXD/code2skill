@@ -49,11 +49,11 @@ Use it when a Python project needs coding assistants to follow the current modul
 
 | Method | Gold evidence recall |
 |---|---:|
-| Path-only baseline | 0.048 |
-| AST symbols baseline | 0.357 |
+| Path-only baseline | 0.044 |
+| AST symbols baseline | 0.356 |
 | code2skill semantic scanner | 1.000 |
 
-The gold set covers route decorators, service calls, type references, data-flow edges, dynamic imports, raised exceptions, main guards, and internal dependency edges. Reproduce it with:
+The gold set covers route decorators, service calls, type references, data-flow edges, dynamic imports, re-exported symbol dependencies, raised exceptions, main guards, and internal dependency edges. Reproduce it with:
 
 ```bash
 python benchmarks/evaluate_structural_evidence.py
@@ -179,8 +179,8 @@ The default artifact directory is `.code2skill/`.
 | Path | Purpose |
 |---|---|
 | `adoption-guide.md` | Repository-specific adoption checklist and next workflow |
-| `project-summary.md` | Human-readable repository summary |
-| `skill-blueprint.json` | Structural repository blueprint |
+| `project-summary.md` | Human-readable repository summary with evidence coverage and import graph signals |
+| `skill-blueprint.json` | Structural repository blueprint with evidence counts and dependency graph stats |
 | `skill-plan.json` | LLM-planned Skill inventory |
 | `references/*.md` | Architecture, style, workflow, and API references |
 | `skills/index.md` | Generated Skill index |

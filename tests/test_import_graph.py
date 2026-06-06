@@ -160,3 +160,83 @@ def test_import_graph_resolves_from_imported_submodules_and_dynamic_imports() ->
         "src/app/plugins/audit.py",
         "src/app/services.py",
     ]
+
+
+def test_import_graph_resolves_reexported_symbol_references() -> None:
+    graph = ImportGraph()
+    graph.build(
+        {
+            "src/shop/__init__.py": SourceFileSummary(
+                path="src/shop/__init__.py",
+                inferred_role="source",
+                language="python",
+                imports=["shop.core.ops"],
+                import_details=[
+                    ImportInfo(
+                        module="shop.core.ops",
+                        kind="from",
+                        names=["UserService"],
+                        aliases=["UserService"],
+                    )
+                ],
+            ),
+            "src/shop/api/users.py": SourceFileSummary(
+                path="src/shop/api/users.py",
+                inferred_role="route",
+                language="python",
+                imports=["shop"],
+                import_details=[
+                    ImportInfo(
+                        module="shop",
+                        kind="from",
+                        names=["UserService"],
+                        aliases=["UserService"],
+                    )
+                ],
+                call_targets=["UserService", "UserService.create"],
+            ),
+            "src/shop/core/ops.py": SourceFileSummary(
+                path="src/shop/core/ops.py",
+                inferred_role="service",
+                language="python",
+                top_level_symbols=["UserService"],
+                classes=["UserService"],
+            ),
+        }
+    )
+
+    assert graph.internal_dependencies_for("src/shop/api/users.py") == [
+        "src/shop/__init__.py",
+        "src/shop/core/ops.py",
+    ]
+    assert graph.get_in_degree("src/shop/core/ops.py") == 2
+
+
+def test_import_graph_leaves_ambiguous_plain_symbol_references_unresolved() -> None:
+    graph = ImportGraph()
+    graph.build(
+        {
+            "src/app/handler.py": SourceFileSummary(
+                path="src/app/handler.py",
+                inferred_role="source",
+                language="python",
+                call_targets=["UserService"],
+            ),
+            "src/app/a.py": SourceFileSummary(
+                path="src/app/a.py",
+                inferred_role="service",
+                language="python",
+                top_level_symbols=["UserService"],
+                classes=["UserService"],
+            ),
+            "src/app/b.py": SourceFileSummary(
+                path="src/app/b.py",
+                inferred_role="service",
+                language="python",
+                top_level_symbols=["UserService"],
+                classes=["UserService"],
+            ),
+        }
+    )
+
+    assert graph.internal_dependencies_for("src/app/handler.py") == []

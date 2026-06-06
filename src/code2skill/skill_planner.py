@@ -132,6 +132,7 @@ def build_default_planner_prompt(
             for item in blueprint.key_configs[:10]
         ]
     ) or "[no key configuration detected]"
+    evidence_coverage_text = _render_evidence_coverage(blueprint)
     core_modules_text = "\n".join(
         [
             (
@@ -191,6 +192,9 @@ Directory structure with file counts and role labels:
 
 Key configuration:
 {key_configs_text}
+
+Evidence coverage:
+{evidence_coverage_text}
 
 Dependency summary:
 {import_graph_text}
@@ -336,3 +340,28 @@ def _render_import_graph(blueprint: SkillBlueprint) -> str:
         *(cluster_lines or ["  - [none]"]),
     ]
     return "\n".join(lines)
+
+
+def _render_evidence_coverage(blueprint: SkillBlueprint) -> str:
+    coverage = blueprint.evidence_coverage
+    if coverage is None:
+        return "[no evidence coverage summary detected]"
+    return "\n".join(
+        [
+            (
+                f"- source_files: {coverage.source_file_count}; "
+                f"high_signal_files: {coverage.high_signal_file_count}/{coverage.source_file_count}"
+            ),
+            (
+                f"- behavior: routes={coverage.route_count}; "
+                f"calls={coverage.call_target_count}; "
+                f"types={coverage.type_reference_count}; "
+                f"data_flows={coverage.data_flow_edge_count}"
+            ),
+            (
+                f"- runtime: dynamic_imports={coverage.dynamic_import_count}; "
+                f"raises={coverage.raised_exception_count}; "
+                f"internal_dependencies={coverage.internal_dependency_count}"
+            ),
+        ]
+    )

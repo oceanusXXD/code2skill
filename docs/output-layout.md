@@ -34,8 +34,8 @@ This bundle separates generated Skill files from intermediate artifacts used for
 ### Review And Diagnostic Artifacts
 
 - `adoption-guide.md`: repository-specific adoption checklist and recommended next workflow.
-- `project-summary.md`: human-readable repository overview.
-- `skill-blueprint.json`: structural analysis output from Phase 1.
+- `project-summary.md`: human-readable repository overview, including evidence coverage and import graph signals.
+- `skill-blueprint.json`: structural analysis output from Phase 1, including extracted evidence counts and dependency graph stats.
 - `skill-plan.json`: planned Skill inventory.
 - `references/*.md`: supporting architecture, style, workflow, and API references.
 - `report.json`: execution metrics, mode decisions, cost estimates, affected files, affected Skills, and artifact lists.

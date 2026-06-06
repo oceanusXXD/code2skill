@@ -227,6 +227,22 @@ class ImportGraphStats:
 
 
 @dataclass(frozen=True)
+class EvidenceCoverage:
+    source_file_count: int
+    high_signal_file_count: int
+    class_count: int
+    function_count: int
+    route_count: int
+    call_target_count: int
+    type_reference_count: int
+    data_flow_edge_count: int
+    dynamic_import_count: int
+    raised_exception_count: int
+    model_or_schema_count: int
+    internal_dependency_count: int
+
+
+@dataclass(frozen=True)
 class SkillBlueprint:
     project_profile: ProjectProfile
     tech_stack: dict[str, Any]
@@ -238,6 +254,7 @@ class SkillBlueprint:
     abstract_rules: list[RuleSummary]
     concrete_workflows: list[WorkflowSummary]
     recommended_skills: list[SkillRecommendation]
+    evidence_coverage: EvidenceCoverage | None = None
     import_graph_stats: ImportGraphStats | None = None
 
     def to_dict(self) -> dict[str, Any]:

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from collections import defaultdict, deque
 from dataclasses import replace
-from pathlib import Path
 
 from .models import (
     CachedFileRecord,
@@ -10,7 +9,7 @@ from .models import (
     SkillImpactIndexEntry,
     SourceFileSummary,
 )
-from .python_imports import build_python_module_index, resolve_python_imports
+from .import_graph import ImportGraph
 
 
 class ImpactAnalyzer:
@@ -18,8 +17,14 @@ class ImpactAnalyzer:
         self,
         records: dict[str, CachedFileRecord],
     ) -> dict[str, CachedFileRecord]:
-        known_paths = set(records)
-        module_index = build_python_module_index(known_paths)
+        graph = ImportGraph()
+        graph.build(
+            {
+                path: record.source_summary
+                for path, record in records.items()
+                if record.source_summary is not None
+            }
+        )
         enriched: dict[str, CachedFileRecord] = {}
         for path, record in records.items():
             summary = record.source_summary
@@ -29,17 +34,11 @@ class ImpactAnalyzer:
             if record.language != "python":
                 enriched[path] = record
                 continue
-            internal_dependencies = resolve_python_imports(
-                source_path=Path(path),
-                imports=summary.imports,
-                known_paths=known_paths,
-                module_index=module_index,
-            )
             enriched[path] = replace(
                 record,
                 source_summary=replace(
                     summary,
-                    internal_dependencies=internal_dependencies,
+                    internal_dependencies=graph.internal_dependencies_for(path),
                 ),
             )
         return enriched
