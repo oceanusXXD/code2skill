@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path, PurePosixPath
 
+from .models import ImportInfo
+
 
 _SOURCE_ROOT_HINTS = {"src", "python", "lib", "packages"}
 
@@ -22,9 +24,22 @@ def resolve_python_imports(
     imports: list[str],
     known_paths: set[str],
     module_index: dict[str, set[str]] | None = None,
+    import_details: list[ImportInfo] | None = None,
 ) -> list[str]:
     resolved: set[str] = set()
     index = module_index or build_python_module_index(known_paths)
+    if import_details:
+        for detail in import_details:
+            resolved.update(
+                resolve_python_import_detail(
+                    source_path=source_path,
+                    detail=detail,
+                    known_paths=known_paths,
+                    module_index=index,
+                )
+            )
+        return sorted(resolved)
+
     for import_name in imports:
         resolved.update(
             resolve_python_import(
@@ -34,6 +49,49 @@ def resolve_python_imports(
                 module_index=index,
             )
         )
+    return sorted(resolved)
+
+
+def resolve_python_import_detail(
+    source_path: Path,
+    detail: ImportInfo,
+    known_paths: set[str],
+    module_index: dict[str, set[str]] | None = None,
+) -> list[str]:
+    resolved: set[str] = set()
+    index = module_index or build_python_module_index(known_paths)
+    resolved.update(
+        resolve_python_import(
+            source_path=source_path,
+            import_name=detail.module,
+            known_paths=known_paths,
+            module_index=index,
+        )
+    )
+
+    if detail.kind == "from":
+        for name in detail.names:
+            if name == "*":
+                continue
+            resolved.update(
+                resolve_python_import(
+                    source_path=source_path,
+                    import_name=_join_from_import(detail.module, name),
+                    known_paths=known_paths,
+                    module_index=index,
+                )
+            )
+
+    if detail.is_dynamic:
+        resolved.update(
+            resolve_python_import(
+                source_path=source_path,
+                import_name=detail.module,
+                known_paths=known_paths,
+                module_index=index,
+            )
+        )
+
     return sorted(resolved)
 
 
@@ -73,6 +131,15 @@ def _resolve_relative_import(
     if module_name:
         target = target.joinpath(*module_name.split("."))
     return _expand_python_candidates(target, known_paths)
+
+
+def _join_from_import(module: str, name: str) -> str:
+    if module.startswith("."):
+        separator = "" if module.endswith(".") else "."
+        return f"{module}{separator}{name}"
+    if module:
+        return f"{module}.{name}"
+    return name
 
 
 def _expand_python_candidates(

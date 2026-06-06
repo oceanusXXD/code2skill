@@ -51,6 +51,8 @@ class ImportInfo:
     kind: str = "import"
     is_relative: bool = False
     is_dynamic: bool = False
+    names: list[str] = field(default_factory=list)
+    aliases: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -65,6 +67,10 @@ class FunctionInfo:
     signature: str = ""
     decorators: list[str] = field(default_factory=list)
     return_type: str | None = None
+    parameters: list[str] = field(default_factory=list)
+    calls: list[str] = field(default_factory=list)
+    raises: list[str] = field(default_factory=list)
+    type_references: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -73,6 +79,7 @@ class ClassInfo:
     bases: list[str] = field(default_factory=list)
     methods: list[str] = field(default_factory=list)
     decorators: list[str] = field(default_factory=list)
+    attributes: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -91,6 +98,12 @@ class SourceFileSummary:
     class_details: list[ClassInfo] = field(default_factory=list)
     methods: list[str] = field(default_factory=list)
     decorators: list[str] = field(default_factory=list)
+    call_targets: list[str] = field(default_factory=list)
+    instantiated_classes: list[str] = field(default_factory=list)
+    raised_exceptions: list[str] = field(default_factory=list)
+    type_references: list[str] = field(default_factory=list)
+    data_flow_edges: list[str] = field(default_factory=list)
+    dynamic_imports: list[str] = field(default_factory=list)
     routes: list[RouteSummary] = field(default_factory=list)
     models_or_schemas: list[str] = field(default_factory=list)
     state_signals: list[str] = field(default_factory=list)

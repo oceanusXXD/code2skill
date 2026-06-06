@@ -73,6 +73,12 @@ def render_source_summary(summary: SourceFileSummary) -> str:
             f"classes: {', '.join(summary.classes) or '-'}",
             f"functions: {', '.join(summary.functions) or '-'}",
             f"methods: {', '.join(summary.methods) or '-'}",
+            f"call_targets: {_join_limited(summary.call_targets)}",
+            f"instantiated_classes: {_join_limited(summary.instantiated_classes)}",
+            f"type_references: {_join_limited(summary.type_references)}",
+            f"data_flow_edges: {_join_limited(summary.data_flow_edges)}",
+            f"dynamic_imports: {_join_limited(summary.dynamic_imports)}",
+            f"raised_exceptions: {_join_limited(summary.raised_exceptions)}",
             f"models_or_schemas: {', '.join(summary.models_or_schemas) or '-'}",
             f"state_signals: {', '.join(summary.state_signals) or '-'}",
             "routes:",
@@ -80,3 +86,9 @@ def render_source_summary(summary: SourceFileSummary) -> str:
         + (route_lines or ["-"])
         + [f"notes: {', '.join(summary.notes) or '-'}"]
     )
+
+
+def _join_limited(items: list[str], limit: int = 12) -> str:
+    shown = items[:limit]
+    suffix = f", +{len(items) - limit} more" if len(items) > limit else ""
+    return f"{', '.join(shown)}{suffix}" if shown else "-"

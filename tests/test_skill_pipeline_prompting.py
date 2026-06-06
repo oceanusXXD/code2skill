@@ -190,7 +190,8 @@ def test_skill_planner_prompt_includes_scan_context_and_sanitizes_output(
     assert "Key configuration:" in prompt
     assert "Dependency summary:" in prompt
     assert "Heuristic recommendations (low-priority reference, do not follow blindly):" in prompt
-    assert "Prefer package boundaries, directory boundaries, dependency clusters, and stable workflows over generic labels." in prompt
+    assert "Prefer package boundaries, directory boundaries, dependency clusters, call/type/data-flow evidence, and stable workflows over generic labels." in prompt
+    assert "calls=RepositoryScanner.scan" in prompt
     assert "Documentation, release, packaging, and CI files can support a skill" in prompt
     assert "Use names that describe the repository subsystem or workflow" in prompt
 
@@ -430,6 +431,7 @@ def _sample_blueprint() -> SkillBlueprint:
                 classes=["RepositoryScanner"],
                 functions=["scan"],
                 internal_dependencies=["src/code2skill/scanner/detector.py"],
+                call_targets=["RepositoryScanner.scan"],
                 short_doc_summary="Repository scanning",
                 confidence=0.8,
             ),

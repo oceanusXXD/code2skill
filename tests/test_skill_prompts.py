@@ -48,6 +48,7 @@ def test_generation_prompt_includes_hard_requirements_and_context() -> None:
     assert "Hard requirements:" in prompt
     assert "Output exactly the 5 sections listed below and nothing else." in prompt
     assert "Write for an engineer modifying this repository" in prompt
+    assert "call-target, type-reference, and data-flow skeleton lines" in prompt
     assert "marketing copy" in prompt
     assert "--- src/app.py ---" in prompt
 

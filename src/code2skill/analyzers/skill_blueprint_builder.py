@@ -201,7 +201,8 @@ class SkillBlueprintBuilder:
                     )
                 )
             if summary.inferred_role == "service":
-                for function_name in summary.functions[:3]:
+                service_entries = [*summary.functions, *summary.methods]
+                for function_name in service_entries[:4]:
                     apis.append(
                         ApiSummary(
                             kind=summary.inferred_role,
@@ -305,6 +306,9 @@ def _core_module_sort_key(summary: SourceFileSummary) -> tuple[int, float, int, 
         + len(summary.methods)
         + len(summary.routes) * 2
         + len(summary.internal_dependencies)
+        + min(len(summary.call_targets), 8)
+        + min(len(summary.type_references), 4)
+        + min(len(summary.data_flow_edges), 4)
     )
     return (
         role_priority,

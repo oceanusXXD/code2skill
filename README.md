@@ -14,7 +14,7 @@ Use it when a Python project needs coding assistants to follow the current modul
 
 ## What This Repository Can Do
 
-- Analyze a Python repository with AST parsing, import graph checks, config extraction, and file-role inference.
+- Analyze a Python repository with AST semantic extraction, import graph checks, call/type/data-flow evidence, config extraction, and file-role inference.
 - Write a `.code2skill/` bundle with a project summary, references, a Skill plan, generated Skills, a report, and incremental state.
 - Estimate model cost and affected Skills before generation.
 - Generate Skill Markdown from repository evidence using OpenAI Responses API, OpenAI-compatible Responses endpoints, Claude, or Qwen.
@@ -240,6 +240,7 @@ For lower-level automation, use `create_scan_config(...)` with `scan_repository(
 - [CI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/ci.md)
 - [Python API](https://github.com/oceanusXXD/code2skill/blob/main/docs/python-api.md)
 - [Output Layout](https://github.com/oceanusXXD/code2skill/blob/main/docs/output-layout.md)
+- [Algorithm Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/algorithm-notes.md)
 - [Release Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/release.md)
 - [Changelog](https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md)
 

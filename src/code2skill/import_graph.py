@@ -27,6 +27,7 @@ class ImportGraph:
                 imports=skeleton.imports,
                 known_paths=self._nodes,
                 module_index=module_index,
+                import_details=skeleton.import_details,
             ):
                 self._edges[path].add(dependency)
                 self._reverse_edges.setdefault(dependency, set()).add(path)

@@ -70,6 +70,7 @@ class FilePrioritizer:
     ) -> tuple[int, list[str], str]:
         role = current_role
         reasons = list(current_reasons)
+        content_role: str | None = None
 
         if summary is not None:
             content_role, content_reasons = self.infer_role_from_content(summary)
@@ -79,6 +80,12 @@ class FilePrioritizer:
             reasons.extend(content_reasons)
 
         score = current_score
+        if summary is not None:
+            content_boost = self._content_signal_boost(summary, content_role)
+            if content_boost:
+                score += content_boost
+                reasons.append(f"content signal boost:{content_boost}")
+
         if in_degree:
             score += in_degree * 3
             reasons.append(f"in_degree:{in_degree}")
@@ -137,11 +144,33 @@ class FilePrioritizer:
             role = "model"
             reasons.append("content signal: model/schema")
 
+        if role is None and "has_main_guard" in summary.notes:
+            role = "entrypoint"
+            reasons.append("content signal: main guard")
+
         if role is None and len(summary.functions) >= 2:
             role = "utility"
             reasons.append("content signal: exported helpers")
 
         return role, reasons
+
+    def _content_signal_boost(self, summary: SourceFileSummary, role: str | None) -> int:
+        role_boost = {
+            "entrypoint": 20,
+            "route": 25,
+            "service": 18,
+            "model": 16,
+            "utility": 8,
+        }.get(role, 0)
+        semantic_density = (
+            min(len(summary.call_targets), 8)
+            + min(len(summary.type_references), 4)
+            + min(len(summary.data_flow_edges), 4)
+            + len(summary.dynamic_imports) * 2
+        )
+        if summary.raised_exceptions:
+            semantic_density += 1
+        return role_boost + min(semantic_density, 12)
 
     def _matched_rules(
         self,

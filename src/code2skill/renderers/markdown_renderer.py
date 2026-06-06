@@ -99,7 +99,11 @@ def render_project_summary(blueprint: SkillBlueprint) -> str:
         ]
     )
     lines.extend(
-        f"- {module.path}: {module.inferred_role}; {module.short_doc_summary}"
+        (
+            f"- {module.path}: {module.inferred_role}; {module.short_doc_summary}; "
+            f"calls={', '.join(module.call_targets[:5]) or '-'}; "
+            f"types={', '.join(module.type_references[:5]) or '-'}"
+        )
         for module in blueprint.core_modules
     )
     lines.extend(

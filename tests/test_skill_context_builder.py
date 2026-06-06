@@ -30,3 +30,21 @@ def test_build_skeleton_from_content_uses_source_summary_for_python(tmp_path: Pa
 
     assert "[SOURCE SKELETON] src/app.py" in skeleton
     assert "functions: main" in skeleton
+
+
+def test_build_skeleton_from_content_includes_semantic_lines(tmp_path: Path) -> None:
+    skeleton = build_skeleton_from_content(
+        repo_path=tmp_path,
+        relative_path="src/app.py",
+        content=(
+            "from pathlib import Path\n\n"
+            "def main(root: str) -> Path:\n"
+            "    path = Path(root)\n"
+            "    return path\n"
+        ),
+    )
+
+    assert "call_targets: Path" in skeleton
+    assert "instantiated_classes: Path" in skeleton
+    assert "type_references: Path" in skeleton
+    assert "data_flow_edges: main:path<-Path" in skeleton

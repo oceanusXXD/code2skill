@@ -55,14 +55,15 @@ Hard requirements:
 8. If the evidence only shows a common pattern instead of a hard rule, say so explicitly.
 9. Mark uncertainty as [Needs confirmation].
 10. Prefer behavior constraints, call order, module boundaries, data contracts, and extension points over style trivia.
-11. Do not turn `from __future__ import annotations`, routine typing, import ordering, empty `__init__.py`, or a shared `Path` import into a rule unless it materially affects behavior.
-12. Keep "Core Rules" to 4-6 high-value bullets.
-13. Every code block must be copied verbatim from the provided file context. Do not simplify, abbreviate, or synthesize snippets.
-14. If you cannot quote an exact code snippet from the provided context, write one bullet under "Typical Patterns": "[Needs confirmation] No exact grounded snippet is available in the provided context."
-15. Write for an engineer modifying this repository: favor concrete edit guidance over general descriptions.
-16. Do not include marketing copy, release notes, package metadata summaries, or generic documentation advice unless those files define the subsystem in scope.
-17. Avoid rules that merely restate what a symbol is named; explain the behavior, boundary, or contract that should guide future edits.
-18. Keep code snippets short and choose snippets that demonstrate a rule or flow.
+11. Use import, call-target, type-reference, and data-flow skeleton lines when they clarify ownership or execution order.
+12. Do not turn `from __future__ import annotations`, routine typing, import ordering, empty `__init__.py`, or a shared `Path` import into a rule unless it materially affects behavior.
+13. Keep "Core Rules" to 4-6 high-value bullets.
+14. Every code block must be copied verbatim from the provided file context. Do not simplify, abbreviate, or synthesize snippets.
+15. If you cannot quote an exact code snippet from the provided context, write one bullet under "Typical Patterns": "[Needs confirmation] No exact grounded snippet is available in the provided context."
+16. Write for an engineer modifying this repository: favor concrete edit guidance over general descriptions.
+17. Do not include marketing copy, release notes, package metadata summaries, or generic documentation advice unless those files define the subsystem in scope.
+18. Avoid rules that merely restate what a symbol is named; explain the behavior, boundary, or contract that should guide future edits.
+19. Keep code snippets short and choose snippets that demonstrate a rule or flow.
 
 Return Markdown with exactly this structure:
 

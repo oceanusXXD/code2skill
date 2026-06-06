@@ -14,7 +14,7 @@
 
 ## 这个仓库可以做什么
 
-- 用 AST、import graph、配置抽取和文件角色推断分析 Python 仓库。
+- 用 AST 语义抽取、import graph、调用/类型/data-flow 证据、配置抽取和文件角色推断分析 Python 仓库。
 - 写出 `.code2skill/` bundle，包括项目概要、参考文档、Skill plan、生成的 Skills、执行报告和增量 state。
 - 在生成前估算模型成本和受影响 Skills。
 - 使用 OpenAI Responses API、OpenAI-compatible Responses endpoint、Claude 或 Qwen，从仓库证据生成 Skill Markdown。
@@ -240,6 +240,7 @@ print(readiness.ready, readiness.score)
 - [CI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/ci.md)
 - [Python API](https://github.com/oceanusXXD/code2skill/blob/main/docs/python-api.md)
 - [Output Layout](https://github.com/oceanusXXD/code2skill/blob/main/docs/output-layout.md)
+- [Algorithm Notes](https://github.com/oceanusXXD/code2skill/blob/main/docs/algorithm-notes.md)
 - [Release Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/release.md)
 - [Changelog](https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md)
 

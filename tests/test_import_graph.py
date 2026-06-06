@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from code2skill.import_graph import ImportGraph
-from code2skill.models import SourceFileSummary
+from code2skill.models import ImportInfo, SourceFileSummary
 
 
 def _summary(path: str, language: str, imports: list[str]) -> SourceFileSummary:
@@ -117,3 +117,46 @@ def test_import_graph_resolves_python_src_layout_imports() -> None:
         "src/demo_user_service/services/user_service.py",
     ]
     assert graph.get_in_degree("src/demo_user_service/models.py") == 2
+
+
+def test_import_graph_resolves_from_imported_submodules_and_dynamic_imports() -> None:
+    graph = ImportGraph()
+    graph.build(
+        {
+            "src/app/handlers.py": SourceFileSummary(
+                path="src/app/handlers.py",
+                inferred_role="source",
+                language="python",
+                imports=[".", "app.plugins.audit"],
+                import_details=[
+                    ImportInfo(
+                        module=".",
+                        kind="from",
+                        is_relative=True,
+                        names=["services"],
+                        aliases=["services"],
+                    ),
+                    ImportInfo(
+                        module="app.plugins.audit",
+                        kind="dynamic",
+                        is_dynamic=True,
+                    ),
+                ],
+            ),
+            "src/app/services.py": _summary(
+                "src/app/services.py",
+                "python",
+                [],
+            ),
+            "src/app/plugins/audit.py": _summary(
+                "src/app/plugins/audit.py",
+                "python",
+                [],
+            ),
+        }
+    )
+
+    assert graph.internal_dependencies_for("src/app/handlers.py") == [
+        "src/app/plugins/audit.py",
+        "src/app/services.py",
+    ]

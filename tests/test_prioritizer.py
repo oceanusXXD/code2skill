@@ -80,5 +80,35 @@ def test_refine_uses_content_signals_to_fix_roles(
     )
 
     assert refined_role == expected_role
-    assert score == 20
+    assert score > 20
     assert any(reason.startswith("content signal:") for reason in reasons)
+    assert any(reason.startswith("content signal boost:") for reason in reasons)
+
+
+def test_refine_uses_main_guard_as_entrypoint_signal() -> None:
+    summary = SourceFileSummary(
+        path="src/runner.py",
+        inferred_role="source",
+        language="python",
+        functions=["main"],
+        call_targets=["main"],
+        notes=["has_main_guard"],
+    )
+
+    score, reasons, refined_role = FilePrioritizer().refine(
+        relative_path=Path(summary.path),
+        language=summary.language,
+        current_score=20,
+        current_role="source",
+        current_reasons=["general source"],
+        summary=summary,
+        in_degree=0,
+        out_degree=1,
+        pagerank_score=0.0,
+        is_entry_point=False,
+        is_hub=False,
+    )
+
+    assert refined_role == "entrypoint"
+    assert score > 20
+    assert "content signal: main guard" in reasons

@@ -5,6 +5,10 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 
 ## Unreleased
 
+- Added semantic Python extraction for call targets, dynamic imports, type references, raised exceptions, class attributes, and lightweight data-flow edges.
+- Improved internal import resolution for detailed `from ... import ...` records and dynamic imports.
+- Fed call/type/data-flow evidence into file prioritization, planning prompts, generated skeletons, and project summaries.
+- Added algorithm notes documenting the paper-backed ideas behind the scanner improvements.
 - Added `doctor` readiness checks for generated bundles, Skill plans, state snapshots, and adapted target files.
 - Added repository-specific `adoption-guide.md` output and updated README/docs around first adoption, CI refresh, and multi-tool publishing workflows.
 - Changed merge-style adapters to preserve hand-written content through a managed code2skill block.

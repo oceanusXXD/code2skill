@@ -138,6 +138,9 @@ def build_default_planner_prompt(
                 f"- {module.path} [{module.inferred_role}] "
                 f"deps={', '.join(module.internal_dependencies[:4]) or '-'}; "
                 f"symbols={', '.join((module.classes + module.functions)[:6]) or '-'}; "
+                f"calls={', '.join(module.call_targets[:6]) or '-'}; "
+                f"types={', '.join(module.type_references[:6]) or '-'}; "
+                f"flows={', '.join(module.data_flow_edges[:4]) or '-'}; "
                 f"summary={module.short_doc_summary or '[none]'}"
             )
             for module in blueprint.core_modules[:16]
@@ -211,7 +214,7 @@ Hard constraints:
 4. The skill count is usually 2-6 and must not exceed {max_skills}.
 5. Each skill must focus on one clear area, not a vague broad topic.
 6. Choose at most 10 read_files per skill.
-7. Prefer package boundaries, directory boundaries, dependency clusters, and stable workflows over generic labels.
+7. Prefer package boundaries, directory boundaries, dependency clusters, call/type/data-flow evidence, and stable workflows over generic labels.
 8. Prefer entrypoints, core models, config files, and representative service or orchestration files.
 9. For similar files, choose only 1-2 representative examples instead of all of them.
 10. If multiple candidate skills depend on heavily overlapping files, merge them.
