@@ -190,56 +190,86 @@ def code2skill_facts(repo_path: Path) -> set[str]:
 
 def render_svg(report: dict[str, object]) -> str:
     results = report["results"]
-    width = 880
-    height = 330
-    left = 210
-    top = 88
-    chart_width = 610
-    bar_height = 34
-    gap = 52
+    width = 980
+    height = 430
+    left = 250
+    top = 134
+    chart_width = 680
+    bar_height = 32
+    gap = 58
+    gold_total = int(report["gold_total"])
+    result_by_method = {result["method"]: result for result in results}
+    semantic_delta = (
+        result_by_method["code2skill-semantic"]["recall"]
+        - result_by_method["ast-symbols"]["recall"]
+    ) * 100
     colors = {
-        "path-only": "#8a8f98",
-        "ast-symbols": "#3f6d8f",
-        "code2skill-semantic": "#198754",
+        "path-only": "#9ca3af",
+        "ast-symbols": "#4f6f8f",
+        "code2skill-semantic": "#0f766e",
     }
     labels = {
         "path-only": "Path-only baseline",
         "ast-symbols": "AST symbols baseline",
         "code2skill-semantic": "code2skill semantic",
     }
+    tick_values = [0.0, 0.25, 0.5, 0.75, 1.0]
     lines = [
-        '<svg xmlns="http://www.w3.org/2000/svg" width="880" height="330" viewBox="0 0 880 330" role="img" aria-labelledby="title desc">',
+        '<svg xmlns="http://www.w3.org/2000/svg" width="980" height="430" viewBox="0 0 980 430" role="img" aria-labelledby="title desc">',
         '<title id="title">Structural evidence extraction benchmark</title>',
         '<desc id="desc">Gold evidence recall for path-only, AST-symbols, and code2skill-semantic extraction.</desc>',
-        '<rect width="880" height="330" fill="#ffffff"/>',
-        '<text x="36" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Structural Evidence Extraction</text>',
-        '<text x="36" y="62" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Gold evidence recall before any LLM call. Higher is better.</text>',
+        '<rect width="980" height="430" fill="#ffffff"/>',
+        '<text x="38" y="44" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#111827">A</text>',
+        '<text x="64" y="44" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">Structural Evidence Extraction</text>',
+        f'<text x="64" y="70" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Deterministic benchmark before any LLM call; gold structural facts, n={gold_total}.</text>',
+        f'<text x="64" y="94" font-family="Arial, sans-serif" font-size="12" fill="#0f766e">code2skill recovers all gold facts and improves over the AST-symbol baseline by {semantic_delta:.1f} percentage points.</text>',
     ]
-    for tick in range(0, 6):
-        x = left + tick * chart_width / 5
-        lines.append(f'<line x1="{x:.1f}" y1="78" x2="{x:.1f}" y2="252" stroke="#eef0f3"/>')
+    for value in tick_values:
+        x = left + value * chart_width
+        lines.append(f'<line x1="{x:.1f}" y1="118" x2="{x:.1f}" y2="320" stroke="#e5e7eb" stroke-width="1"/>')
         lines.append(
-            f'<text x="{x - 8:.1f}" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">{tick / 5:.1f}</text>'
+            f'<text x="{x - 10:.1f}" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">{value:.2f}</text>'
         )
+    lines.append(
+        f'<line x1="{left}" y1="118" x2="{left + chart_width}" y2="118" stroke="#111827" stroke-width="1"/>'
+    )
+    lines.append(
+        f'<line x1="{left}" y1="118" x2="{left}" y2="320" stroke="#111827" stroke-width="1"/>'
+    )
+    lines.append(
+        f'<text x="{left + chart_width / 2 - 58:.1f}" y="372" font-family="Arial, sans-serif" font-size="13" fill="#111827">Gold evidence recall</text>'
+    )
     for index, result in enumerate(results):
         method = result["method"]
         y = top + index * gap
         value = result["recall"]
         bar_width = value * chart_width
         lines.append(
-            f'<text x="36" y="{y + 23}" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">{labels[method]}</text>'
+            f'<text x="64" y="{y + 22}" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">{labels[method]}</text>'
         )
         lines.append(
-            f'<rect x="{left}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" rx="4" fill="{colors[method]}"/>'
+            f'<rect x="{left}" y="{y}" width="{bar_width:.1f}" height="{bar_height}" fill="{colors[method]}"/>'
         )
         lines.append(
-            f'<text x="{left + bar_width + 10:.1f}" y="{y + 23}" font-family="Arial, sans-serif" font-size="13" fill="#111827">{value:.3f} ({result["gold_hits"]}/{result["gold_total"]})</text>'
+            f'<text x="{left + bar_width + 10:.1f}" y="{y + 21}" font-family="Arial, sans-serif" font-size="13" fill="#111827">{value:.3f}</text>'
+        )
+        lines.append(
+            f'<text x="{left - 66}" y="{y + 22}" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">{result["gold_hits"]}/{result["gold_total"]}</text>'
         )
     lines.append(
-        '<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, re-exported symbols, exceptions, and dependency edges.</text>'
+        f'<text x="{left - 80}" y="118" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#374151">hits</text>'
+    )
+    lines.append(
+        f'<line x1="{left}" y1="313" x2="{left + chart_width}" y2="313" stroke="#111827" stroke-width="1"/>'
+    )
+    lines.append(
+        '<text x="64" y="404" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">Gold set: roles, imports, routes, calls, type references, models, data-flow, dynamic imports, exceptions, main guards, re-exports, and dependency edges.</text>'
+    )
+    lines.append(
+        '<text x="64" y="388" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Bars report exact recall on a synthetic fixture repository; higher is better.</text>'
     )
     lines.append("</svg>")
-    return "\n".join(lines)
+    return "\n".join(lines) + "\n"
 
 
 def gold_facts() -> list[str]:

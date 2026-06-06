@@ -41,6 +41,60 @@
 | 平台自动化 | DevEx 团队跨多个 Python 服务运行同一流程 | Python API 返回结构化结果和 readiness |
 | 开源贡献者 onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 docs 说明仓库的工作契约 |
 
+## 流程图
+
+![code2skill pipeline](docs/assets/code2skill-pipeline.svg)
+
+最终产物是一套可以提交到仓库里的 Skill 层，而不是一段聊天记录。结构化产物会保留下来，用于审阅、成本估算、CI 刷新和 readiness 检查。
+
+## 生成 Skill 示例
+
+生成的 Skill 是 `.code2skill/skills/*.md` 下的 Markdown 文件。下面是基于当前仓库证据整理的缩短示例，展示最终输出应该长什么样。
+
+<details>
+<summary>Repository analysis pipeline</summary>
+
+```markdown
+# Repository Analysis Pipeline
+
+## Overview
+Use this Skill when changing how code2skill scans a repository, builds evidence, or writes structural artifacts.
+
+## Core Rules
+- Keep `execute_repository(...)` as the orchestration entrypoint. Source: src/code2skill/core.py
+- Resolve dependencies through `ImportGraph` before ranking files or computing affected files. Source: src/code2skill/import_graph.py, src/code2skill/impact.py
+- Treat `project-summary.md`, `skill-blueprint.json`, `report.json`, and `state/analysis-state.json` as review and CI artifacts. Source: src/code2skill/core.py
+
+## Common Flows
+1. Scan candidates and extract source/config summaries.
+2. Build import graph, PageRank, evidence coverage, and blueprint.
+3. Render summary/reference/report artifacts before optional Skill generation.
+```
+
+</details>
+
+<details>
+<summary>Assistant target publishing</summary>
+
+```markdown
+# Assistant Target Publishing
+
+## Overview
+Use this Skill when publishing generated Skills into Codex, Claude Code, Cursor, GitHub Copilot, or Windsurf target files.
+
+## Core Rules
+- Use `adapt` for target publishing; generated target content must stay inside managed blocks or manifest-tracked files. Source: src/code2skill/adapt.py, src/code2skill/capabilities/adapt/targets.py
+- Run `doctor` after adaptation to verify the bundle, Skill plan, generated Skill files, state, and selected target output. Source: src/code2skill/capabilities/adoption_service.py
+- Preserve hand-written target-file content outside the managed block. Source: src/code2skill/capabilities/output_bundle_service.py
+
+## Common Flows
+1. Generate or refresh `.code2skill/skills/*.md`.
+2. Run `code2skill adapt . --target <tool>`.
+3. Run `code2skill doctor . --target <tool>`.
+```
+
+</details>
+
 ## 基准测试
 
 `code2skill` 评测的是 LLM 调用前的结构证据抽取能力。这个 benchmark 用两个简单 baseline 对比 Skill 生成流水线使用的语义扫描器。

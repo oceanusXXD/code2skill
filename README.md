@@ -41,6 +41,60 @@ Use it when a Python project needs coding assistants to follow the current modul
 | Platform automation | A DevEx team runs the workflow across many Python services | Python API returns structured results and readiness status |
 | Contributor onboarding | New contributors need project-specific implementation rules | Generated Skills and docs describe the repo's working contracts |
 
+## Pipeline
+
+![code2skill pipeline](docs/assets/code2skill-pipeline.svg)
+
+The final product is a repository-owned Skill layer, not a chat transcript. Structural artifacts stay available for review, cost estimation, CI refresh, and readiness checks.
+
+## Example Generated Skills
+
+Generated Skills are source-cited Markdown files under `.code2skill/skills/*.md`. These shortened examples show the kind of output `code2skill` is designed to produce from repository evidence.
+
+<details>
+<summary>Repository analysis pipeline</summary>
+
+```markdown
+# Repository Analysis Pipeline
+
+## Overview
+Use this Skill when changing how code2skill scans a repository, builds evidence, or writes structural artifacts.
+
+## Core Rules
+- Keep `execute_repository(...)` as the orchestration entrypoint. Source: src/code2skill/core.py
+- Resolve dependencies through `ImportGraph` before ranking files or computing affected files. Source: src/code2skill/import_graph.py, src/code2skill/impact.py
+- Treat `project-summary.md`, `skill-blueprint.json`, `report.json`, and `state/analysis-state.json` as review and CI artifacts. Source: src/code2skill/core.py
+
+## Common Flows
+1. Scan candidates and extract source/config summaries.
+2. Build import graph, PageRank, evidence coverage, and blueprint.
+3. Render summary/reference/report artifacts before optional Skill generation.
+```
+
+</details>
+
+<details>
+<summary>Assistant target publishing</summary>
+
+```markdown
+# Assistant Target Publishing
+
+## Overview
+Use this Skill when publishing generated Skills into Codex, Claude Code, Cursor, GitHub Copilot, or Windsurf target files.
+
+## Core Rules
+- Use `adapt` for target publishing; generated target content must stay inside managed blocks or manifest-tracked files. Source: src/code2skill/adapt.py, src/code2skill/capabilities/adapt/targets.py
+- Run `doctor` after adaptation to verify the bundle, Skill plan, generated Skill files, state, and selected target output. Source: src/code2skill/capabilities/adoption_service.py
+- Preserve hand-written target-file content outside the managed block. Source: src/code2skill/capabilities/output_bundle_service.py
+
+## Common Flows
+1. Generate or refresh `.code2skill/skills/*.md`.
+2. Run `code2skill adapt . --target <tool>`.
+3. Run `code2skill doctor . --target <tool>`.
+```
+
+</details>
+
 ## Benchmark
 
 `code2skill` is evaluated on structural evidence extraction before any LLM call. The benchmark compares two simple baselines against the semantic scanner used by the Skill generation pipeline.

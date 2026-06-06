@@ -1,29 +1,38 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="880" height="330" viewBox="0 0 880 330" role="img" aria-labelledby="title desc">
+<svg xmlns="http://www.w3.org/2000/svg" width="980" height="430" viewBox="0 0 980 430" role="img" aria-labelledby="title desc">
 <title id="title">Structural evidence extraction benchmark</title>
 <desc id="desc">Gold evidence recall for path-only, AST-symbols, and code2skill-semantic extraction.</desc>
-<rect width="880" height="330" fill="#ffffff"/>
-<text x="36" y="38" font-family="Arial, sans-serif" font-size="24" font-weight="700" fill="#111827">Structural Evidence Extraction</text>
-<text x="36" y="62" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Gold evidence recall before any LLM call. Higher is better.</text>
-<line x1="210.0" y1="78" x2="210.0" y2="252" stroke="#eef0f3"/>
-<text x="202.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">0.0</text>
-<line x1="332.0" y1="78" x2="332.0" y2="252" stroke="#eef0f3"/>
-<text x="324.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">0.2</text>
-<line x1="454.0" y1="78" x2="454.0" y2="252" stroke="#eef0f3"/>
-<text x="446.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">0.4</text>
-<line x1="576.0" y1="78" x2="576.0" y2="252" stroke="#eef0f3"/>
-<text x="568.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">0.6</text>
-<line x1="698.0" y1="78" x2="698.0" y2="252" stroke="#eef0f3"/>
-<text x="690.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">0.8</text>
-<line x1="820.0" y1="78" x2="820.0" y2="252" stroke="#eef0f3"/>
-<text x="812.0" y="276" font-family="Arial, sans-serif" font-size="11" fill="#6b7280">1.0</text>
-<text x="36" y="111" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">Path-only baseline</text>
-<rect x="210" y="88" width="27.1" height="34" rx="4" fill="#8a8f98"/>
-<text x="247.1" y="111" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.044 (2/45)</text>
-<text x="36" y="163" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">AST symbols baseline</text>
-<rect x="210" y="140" width="216.9" height="34" rx="4" fill="#3f6d8f"/>
-<text x="436.9" y="163" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.356 (16/45)</text>
-<text x="36" y="215" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">code2skill semantic</text>
-<rect x="210" y="192" width="610.0" height="34" rx="4" fill="#198754"/>
-<text x="830.0" y="215" font-family="Arial, sans-serif" font-size="13" fill="#111827">1.000 (45/45)</text>
-<text x="36" y="314" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">code2skill captures routes, calls, type references, data-flow, dynamic imports, re-exported symbols, exceptions, and dependency edges.</text>
+<rect width="980" height="430" fill="#ffffff"/>
+<text x="38" y="44" font-family="Arial, sans-serif" font-size="15" font-weight="700" fill="#111827">A</text>
+<text x="64" y="44" font-family="Arial, sans-serif" font-size="22" font-weight="700" fill="#111827">Structural Evidence Extraction</text>
+<text x="64" y="70" font-family="Arial, sans-serif" font-size="13" fill="#4b5563">Deterministic benchmark before any LLM call; gold structural facts, n=45.</text>
+<text x="64" y="94" font-family="Arial, sans-serif" font-size="12" fill="#0f766e">code2skill recovers all gold facts and improves over the AST-symbol baseline by 64.4 percentage points.</text>
+<line x1="250.0" y1="118" x2="250.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="240.0" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">0.00</text>
+<line x1="420.0" y1="118" x2="420.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="410.0" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">0.25</text>
+<line x1="590.0" y1="118" x2="590.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="580.0" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">0.50</text>
+<line x1="760.0" y1="118" x2="760.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="750.0" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">0.75</text>
+<line x1="930.0" y1="118" x2="930.0" y2="320" stroke="#e5e7eb" stroke-width="1"/>
+<text x="920.0" y="342" font-family="Arial, sans-serif" font-size="12" fill="#374151">1.00</text>
+<line x1="250" y1="118" x2="930" y2="118" stroke="#111827" stroke-width="1"/>
+<line x1="250" y1="118" x2="250" y2="320" stroke="#111827" stroke-width="1"/>
+<text x="532.0" y="372" font-family="Arial, sans-serif" font-size="13" fill="#111827">Gold evidence recall</text>
+<text x="64" y="156" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">Path-only baseline</text>
+<rect x="250" y="134" width="30.2" height="32" fill="#9ca3af"/>
+<text x="290.2" y="155" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.044</text>
+<text x="184" y="156" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">2/45</text>
+<text x="64" y="214" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">AST symbols baseline</text>
+<rect x="250" y="192" width="241.8" height="32" fill="#4f6f8f"/>
+<text x="501.8" y="213" font-family="Arial, sans-serif" font-size="13" fill="#111827">0.356</text>
+<text x="184" y="214" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">16/45</text>
+<text x="64" y="272" font-family="Arial, sans-serif" font-size="14" font-weight="700" fill="#111827">code2skill semantic</text>
+<rect x="250" y="250" width="680.0" height="32" fill="#0f766e"/>
+<text x="940.0" y="271" font-family="Arial, sans-serif" font-size="13" fill="#111827">1.000</text>
+<text x="184" y="272" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">45/45</text>
+<text x="170" y="118" font-family="Arial, sans-serif" font-size="12" font-weight="700" fill="#374151">hits</text>
+<line x1="250" y1="313" x2="930" y2="313" stroke="#111827" stroke-width="1"/>
+<text x="64" y="404" font-family="Arial, sans-serif" font-size="12" fill="#4b5563">Gold set: roles, imports, routes, calls, type references, models, data-flow, dynamic imports, exceptions, main guards, re-exports, and dependency edges.</text>
+<text x="64" y="388" font-family="Arial, sans-serif" font-size="12" fill="#6b7280">Bars report exact recall on a synthetic fixture repository; higher is better.</text>
 </svg>

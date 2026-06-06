@@ -36,3 +36,14 @@ def test_structural_evidence_benchmark_script_generates_report_and_svg(
     assert recalls["ast-symbols"] < recalls["code2skill-semantic"]
     assert recalls["code2skill-semantic"] == 1.0
     assert "Structural Evidence Extraction" in svg_path.read_text(encoding="utf-8")
+
+
+def test_readme_visual_assets_exist() -> None:
+    readme = Path("README.md").read_text(encoding="utf-8")
+    for asset in [
+        Path("docs/assets/structural-evidence-benchmark.svg"),
+        Path("docs/assets/code2skill-pipeline.svg"),
+    ]:
+        assert asset.as_posix() in readme
+        assert asset.exists()
+        assert "<svg" in asset.read_text(encoding="utf-8")
