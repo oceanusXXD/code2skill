@@ -48,8 +48,8 @@ def test_run_ci_repository_uses_git_diff_for_incremental_skill_patch(
     )
 
     _git(repo_path, "init")
-    _git(repo_path, "config", "user.email", "codex@example.com")
-    _git(repo_path, "config", "user.name", "Codex")
+    _git(repo_path, "config", "user.email", "test@example.invalid")
+    _git(repo_path, "config", "user.name", "Test User")
     _git(repo_path, "add", ".")
     _git(repo_path, "commit", "-m", "initial")
     head_commit = _git(repo_path, "rev-parse", "HEAD").strip()

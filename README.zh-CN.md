@@ -41,7 +41,7 @@
 | 平台自动化 | DevEx 团队跨多个 Python 服务运行同一流程 | Python API 返回结构化结果和 readiness |
 | 开源贡献者 onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 docs 说明仓库的工作契约 |
 
-## 流程图
+## 架构图
 
 ![code2skill pipeline](docs/assets/code2skill-pipeline.svg)
 

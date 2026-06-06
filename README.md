@@ -41,7 +41,7 @@ Use it when a Python project needs coding assistants to follow the current modul
 | Platform automation | A DevEx team runs the workflow across many Python services | Python API returns structured results and readiness status |
 | Contributor onboarding | New contributors need project-specific implementation rules | Generated Skills and docs describe the repo's working contracts |
 
-## Pipeline
+## Architecture
 
 ![code2skill pipeline](docs/assets/code2skill-pipeline.svg)
 

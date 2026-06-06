@@ -1,87 +1,107 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="980" height="500" viewBox="0 0 980 500" role="img" aria-labelledby="title desc">
-  <title id="title">code2skill repository-to-skill pipeline</title>
-  <desc id="desc">A left-to-right pipeline showing repository input, structural analysis, Skill planning, Skill generation, target adaptation, and readiness validation.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="620" viewBox="0 0 1080 620" role="img" aria-labelledby="title desc">
+  <title id="title">code2skill evidence compiler architecture</title>
+  <desc id="desc">Layered architecture diagram showing repository inputs, the code2skill evidence compiler, generated Skill artifacts, target assistant files, and readiness validation.</desc>
   <defs>
-    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
-      <path d="M 0 0 L 10 5 L 0 10 z" fill="#374151"/>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155"/>
     </marker>
     <style>
-      .title { font: 700 22px Arial, sans-serif; fill: #111827; }
-      .subtitle { font: 13px Arial, sans-serif; fill: #4b5563; }
-      .stage-title { font: 700 14px Arial, sans-serif; fill: #111827; }
-      .stage-text { font: 12px Arial, sans-serif; fill: #374151; }
-      .small { font: 11px Arial, sans-serif; fill: #6b7280; }
-      .box { fill: #ffffff; stroke: #111827; stroke-width: 1.2; }
-      .soft { fill: #f9fafb; stroke: #d1d5db; stroke-width: 1; }
-      .accent-a { fill: #e0f2fe; stroke: #0f4c81; stroke-width: 1; }
-      .accent-b { fill: #ecfdf5; stroke: #0f766e; stroke-width: 1; }
-      .accent-c { fill: #fff7ed; stroke: #b45309; stroke-width: 1; }
-      .line { stroke: #374151; stroke-width: 1.4; fill: none; marker-end: url(#arrow); }
-      .thin { stroke: #9ca3af; stroke-width: 1; fill: none; }
+      .title { font: 700 24px Arial, sans-serif; fill: #0f172a; }
+      .subtitle { font: 13px Arial, sans-serif; fill: #475569; }
+      .layer-label { font: 700 12px Arial, sans-serif; letter-spacing: 0.08em; fill: #475569; }
+      .box-title { font: 700 14px Arial, sans-serif; fill: #0f172a; }
+      .box-text { font: 12px Arial, sans-serif; fill: #475569; }
+      .caption { font: 12px Arial, sans-serif; fill: #64748b; }
+      .panel { fill: #ffffff; stroke: #cbd5e1; stroke-width: 1.2; }
+      .input { fill: #f8fafc; stroke: #cbd5e1; stroke-width: 1; }
+      .core { fill: #f0f9ff; stroke: #0369a1; stroke-width: 1.2; }
+      .artifact { fill: #ecfdf5; stroke: #047857; stroke-width: 1.2; }
+      .target { fill: #fff7ed; stroke: #c2410c; stroke-width: 1.2; }
+      .note { fill: #f8fafc; stroke: #e2e8f0; stroke-width: 1; }
+      .flow { fill: none; stroke: #334155; stroke-width: 1.5; marker-end: url(#arrow); }
+      .soft-flow { fill: none; stroke: #94a3b8; stroke-width: 1.2; marker-end: url(#arrow); }
+      .divider { stroke: #e2e8f0; stroke-width: 1; }
     </style>
   </defs>
 
-  <rect width="980" height="500" fill="#ffffff"/>
-  <text x="42" y="44" class="title">Repository Evidence To Assistant Skills</text>
-  <text x="42" y="70" class="subtitle">The LLM sits behind a structural evidence layer: scan files, measure evidence, generate Skills, validate targets.</text>
+  <rect width="1080" height="620" fill="#ffffff"/>
+  <text x="46" y="48" class="title">Evidence Compiler Architecture</text>
+  <text x="46" y="74" class="subtitle">code2skill turns repository structure into reviewable Skill files before publishing assistant-specific instructions.</text>
 
-  <rect x="42" y="112" width="142" height="92" class="box"/>
-  <text x="62" y="141" class="stage-title">Python repo</text>
-  <text x="62" y="164" class="stage-text">source files</text>
-  <text x="62" y="183" class="stage-text">config files</text>
-  <text x="62" y="202" class="stage-text">git state</text>
+  <text x="62" y="128" class="layer-label">REPOSITORY INPUTS</text>
+  <text x="390" y="128" class="layer-label">EVIDENCE COMPILER</text>
+  <text x="780" y="128" class="layer-label">SKILL OUTPUTS</text>
 
-  <path d="M 184 158 H 234" class="line"/>
+  <rect x="46" y="146" width="238" height="330" rx="6" class="panel"/>
+  <rect x="66" y="172" width="198" height="72" rx="6" class="input"/>
+  <text x="86" y="200" class="box-title">Source files</text>
+  <text x="86" y="222" class="box-text">Python modules, tests, docs</text>
 
-  <rect x="234" y="104" width="162" height="108" class="accent-a"/>
-  <text x="254" y="134" class="stage-title">1. Analyze</text>
-  <text x="254" y="157" class="stage-text">AST extraction</text>
-  <text x="254" y="176" class="stage-text">routes, calls, types</text>
-  <text x="254" y="195" class="stage-text">data-flow, configs</text>
+  <rect x="66" y="268" width="198" height="72" rx="6" class="input"/>
+  <text x="86" y="296" class="box-title">Config files</text>
+  <text x="86" y="318" class="box-text">pyproject, CI, package data</text>
 
-  <path d="M 396 158 H 446" class="line"/>
+  <rect x="66" y="364" width="198" height="72" rx="6" class="input"/>
+  <text x="86" y="392" class="box-title">Git context</text>
+  <text x="86" y="414" class="box-text">diffs, state, ignored paths</text>
 
-  <rect x="446" y="104" width="170" height="108" class="accent-b"/>
-  <text x="466" y="134" class="stage-title">2. Build graph</text>
-  <text x="466" y="157" class="stage-text">imports + symbols</text>
-  <text x="466" y="176" class="stage-text">re-export edges</text>
-  <text x="466" y="195" class="stage-text">evidence coverage</text>
+  <path d="M 284 208 H 340" class="flow"/>
+  <path d="M 284 304 H 340" class="flow"/>
+  <path d="M 284 400 H 340" class="flow"/>
 
-  <path d="M 616 158 H 666" class="line"/>
+  <rect x="340" y="146" width="390" height="330" rx="6" class="panel"/>
+  <rect x="366" y="172" width="154" height="82" rx="6" class="core"/>
+  <text x="386" y="202" class="box-title">AST extraction</text>
+  <text x="386" y="224" class="box-text">routes, calls, types</text>
+  <text x="386" y="242" class="box-text">data-flow, exceptions</text>
 
-  <rect x="666" y="104" width="170" height="108" class="accent-c"/>
-  <text x="686" y="134" class="stage-title">3. Plan Skills</text>
-  <text x="686" y="157" class="stage-text">blueprint JSON</text>
-  <text x="686" y="176" class="stage-text">project summary</text>
-  <text x="686" y="195" class="stage-text">skill-plan.json</text>
+  <rect x="550" y="172" width="154" height="82" rx="6" class="core"/>
+  <text x="570" y="202" class="box-title">Import graph</text>
+  <text x="570" y="224" class="box-text">modules, aliases</text>
+  <text x="570" y="242" class="box-text">re-exported symbols</text>
 
-  <path d="M 751 212 V 260" class="line"/>
+  <rect x="366" y="286" width="154" height="82" rx="6" class="core"/>
+  <text x="386" y="316" class="box-title">Prioritization</text>
+  <text x="386" y="338" class="box-text">PageRank, roles</text>
+  <text x="386" y="356" class="box-text">evidence coverage</text>
 
-  <rect x="646" y="260" width="210" height="102" class="box"/>
-  <text x="668" y="290" class="stage-title">4. Generate Skill Markdown</text>
-  <text x="668" y="313" class="stage-text">evidence-cited rules</text>
-  <text x="668" y="332" class="stage-text">workflow checkpoints</text>
-  <text x="668" y="351" class="stage-text">uncertainty kept explicit</text>
+  <rect x="550" y="286" width="154" height="82" rx="6" class="core"/>
+  <text x="570" y="316" class="box-title">Skill planning</text>
+  <text x="570" y="338" class="box-text">blueprint, workflows</text>
+  <text x="570" y="356" class="box-text">source-cited context</text>
 
-  <path d="M 646 311 H 558" class="line"/>
+  <path d="M 520 213 H 550" class="soft-flow"/>
+  <path d="M 443 254 V 286" class="soft-flow"/>
+  <path d="M 627 254 V 286" class="soft-flow"/>
+  <path d="M 520 327 H 550" class="soft-flow"/>
 
-  <rect x="350" y="260" width="208" height="102" class="soft"/>
-  <text x="372" y="290" class="stage-title">5. Adapt targets</text>
-  <text x="372" y="313" class="stage-text">AGENTS.md, CLAUDE.md</text>
-  <text x="372" y="332" class="stage-text">Cursor, Copilot</text>
-  <text x="372" y="351" class="stage-text">Windsurf rules</text>
+  <rect x="386" y="402" width="318" height="48" rx="6" class="note"/>
+  <text x="410" y="431" class="caption">LLM calls happen after the structural evidence layer is built.</text>
 
-  <path d="M 350 311 H 260" class="line"/>
+  <path d="M 730 213 H 778" class="flow"/>
+  <path d="M 730 327 H 778" class="flow"/>
 
-  <rect x="72" y="260" width="188" height="102" class="soft"/>
-  <text x="94" y="290" class="stage-title">6. Validate</text>
-  <text x="94" y="313" class="stage-text">doctor readiness</text>
-  <text x="94" y="332" class="stage-text">report.json</text>
-  <text x="94" y="351" class="stage-text">incremental state</text>
+  <rect x="778" y="146" width="256" height="330" rx="6" class="panel"/>
+  <rect x="802" y="172" width="210" height="72" rx="6" class="artifact"/>
+  <text x="822" y="200" class="box-title">.code2skill bundle</text>
+  <text x="822" y="222" class="box-text">summary, blueprint, report, state</text>
 
-  <path d="M 530 212 V 232 H 166 V 260" class="thin"/>
-  <text x="198" y="235" class="small">reverse dependency state powers incremental refresh</text>
+  <rect x="802" y="268" width="210" height="72" rx="6" class="artifact"/>
+  <text x="822" y="296" class="box-title">Generated Skills</text>
+  <text x="822" y="318" class="box-text">source-cited Markdown rules</text>
 
-  <rect x="42" y="410" width="896" height="42" class="soft"/>
-  <text x="64" y="436" class="stage-text">Final product: repository-owned Skill files and target assistant instructions, with structural artifacts available for review and CI.</text>
+  <rect x="802" y="364" width="210" height="72" rx="6" class="target"/>
+  <text x="822" y="392" class="box-title">Assistant targets</text>
+  <text x="822" y="414" class="box-text">Codex, Cursor, Claude, Copilot</text>
+
+  <path d="M 907 244 V 268" class="soft-flow"/>
+  <path d="M 907 340 V 364" class="soft-flow"/>
+
+  <line x1="46" y1="514" x2="1034" y2="514" class="divider"/>
+  <rect x="46" y="536" width="238" height="44" rx="6" class="note"/>
+  <text x="66" y="563" class="caption">No hidden chat context: artifacts live in the repository.</text>
+  <rect x="340" y="536" width="390" height="44" rx="6" class="note"/>
+  <text x="366" y="563" class="caption">Incremental CI uses reverse dependencies and analysis state.</text>
+  <rect x="778" y="536" width="256" height="44" rx="6" class="note"/>
+  <text x="802" y="563" class="caption">doctor validates bundle and target readiness.</text>
 </svg>
