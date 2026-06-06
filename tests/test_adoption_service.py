@@ -117,6 +117,23 @@ def test_adoption_readiness_detects_cursor_manifest_mismatch(tmp_path: Path) -> 
     assert "manifest" in target_check.message
 
 
+def test_adoption_readiness_requires_cursor_manifest(tmp_path: Path) -> None:
+    repo_path, _, skills_dir = _write_minimal_bundle(tmp_path)
+    cursor_rules = repo_path / ".cursor" / "rules"
+    cursor_rules.mkdir(parents=True)
+    (cursor_rules / "index.md").write_text(
+        (skills_dir / "index.md").read_text(encoding="utf-8"),
+        encoding="utf-8",
+    )
+    (cursor_rules / "backend.md").write_text("# Backend\n", encoding="utf-8")
+
+    readiness = inspect_adoption_readiness(repo_path, target="cursor")
+
+    target_check = next(check for check in readiness.checks if check.name == "target_cursor")
+    assert target_check.status == "missing"
+    assert "manifest is missing" in target_check.message
+
+
 def test_adoption_readiness_rejects_unknown_target(tmp_path: Path) -> None:
     repo_path = tmp_path / "repo"
     repo_path.mkdir()

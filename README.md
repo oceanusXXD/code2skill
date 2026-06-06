@@ -21,6 +21,25 @@ Use it when a Python project needs AI coding assistants to understand current mo
 - Validates generated bundles and adapted tool files with `doctor`.
 - Supports OpenAI Responses API, OpenAI-compatible Responses endpoints, Claude, and Qwen.
 
+## Who Uses It
+
+| User profile | What they need | How code2skill helps |
+|---|---|---|
+| Python maintainers | AI assistants that respect current module boundaries and extension patterns | Generates evidence-backed Skills from source code and keeps them reviewable |
+| DevEx and platform teams | A repeatable way to standardize AI coding context across many repositories | Exposes CLI, Python API, CI refresh, and readiness checks |
+| Open-source maintainers | Contributor-facing AI instructions that can be audited like normal docs | Writes committed artifacts and target files instead of relying on private chat history |
+| AI tooling evaluators | One repository knowledge layer that works across several assistants | Publishes the same Skills to Codex, Claude Code, Cursor, GitHub Copilot, and Windsurf |
+
+## Business Scenarios
+
+| Scenario | Trigger | Success signal |
+|---|---|---|
+| First AI adoption | A repository starts using Codex, Cursor, Claude Code, Copilot, or Windsurf | `scan`, `adapt`, and `doctor` produce a ready target file |
+| PR knowledge refresh | Code changes may invalidate existing AI instructions | `ci --mode auto` reports affected files and affected Skills |
+| Multi-tool rollout | A team uses more than one AI coding assistant | `adapt --target all` writes consistent target outputs |
+| Platform automation | A DevEx team runs repository-knowledge checks across many services | Python API returns structured results and readiness status |
+| Open-source contributor onboarding | New contributors need implementation rules before changing code | Generated Skills and README/docs explain the repo's working contracts |
+
 ## Install
 
 Requires Python 3.10 or newer.

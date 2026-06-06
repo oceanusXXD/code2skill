@@ -82,3 +82,20 @@ def test_openai_backend_reports_missing_key(monkeypatch) -> None:
 
     with pytest.raises(RuntimeError, match="CODE2SKILL_OPENAI_API_KEY or OPENAI_API_KEY"):
         OpenAIBackend().complete("hello")
+
+
+def test_post_json_reports_invalid_json(monkeypatch) -> None:
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            return None
+
+        def read(self):
+            return b"not-json"
+
+    monkeypatch.setattr("code2skill.llm_backend.request.urlopen", lambda req, timeout: FakeResponse())
+
+    with pytest.raises(RuntimeError, match="not valid JSON"):
+        OpenAIBackend(model="gpt-test", api_key="direct-key").complete("hello")

@@ -21,6 +21,25 @@ English documentation: [README.md](https://github.com/oceanusXXD/code2skill/blob
 - 用 `doctor` 校验 bundle、Skill plan、state 和目标工具文件是否可用。
 - 支持 OpenAI Responses API、OpenAI-compatible Responses endpoint、Claude 和 Qwen。
 
+## 用户画像
+
+| 用户画像 | 需要什么 | code2skill 如何帮助 |
+|---|---|---|
+| Python 仓库维护者 | AI 助手遵守当前模块边界和扩展方式 | 从源码证据生成可审阅 Skills |
+| DevEx 和平台团队 | 在多个仓库中标准化 AI 编程上下文 | 提供 CLI、Python API、CI 刷新和可用性校验 |
+| 开源维护者 | 像审阅普通文档一样审阅 contributor-facing AI 说明 | 把知识写入可提交文件，而不是留在私有聊天记录 |
+| AI tooling 评估者 | 一套仓库知识发布到多个 AI 助手 | 同一套 Skills 可适配 Codex、Claude Code、Cursor、GitHub Copilot 和 Windsurf |
+
+## 业务场景
+
+| 场景 | 触发条件 | 成功信号 |
+|---|---|---|
+| 首次 AI 接入 | 仓库开始使用 Codex、Cursor、Claude Code、Copilot 或 Windsurf | `scan`、`adapt`、`doctor` 产出 ready 的目标文件 |
+| PR 知识刷新 | 代码改动可能让 AI 说明过期 | `ci --mode auto` 报告 affected files 和 affected Skills |
+| 多工具 rollout | 团队同时使用多个 AI 编程助手 | `adapt --target all` 写出一致的目标工具文件 |
+| 平台自动化 | DevEx 团队跨多个服务运行仓库知识检查 | Python API 返回结构化结果和 readiness |
+| 开源 contributor onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 README/docs 明确仓库工作契约 |
+
 ## 安装
 
 需要 Python 3.10 或更高版本。

@@ -99,13 +99,24 @@ def test_build_config_resolves_relative_aux_paths_from_repo_path(tmp_path: Path)
     assert config.run.pricing is not None
 
 
-def test_invalid_environment_choice_falls_back_to_safe_default(monkeypatch) -> None:
+def test_invalid_environment_choice_returns_user_facing_error(monkeypatch, capsys) -> None:
     monkeypatch.setenv("CODE2SKILL_LLM", "unsupported-provider")
 
-    parser = build_parser()
-    args = parser.parse_args(["scan"])
+    exit_code = main(["scan"])
+    captured = capsys.readouterr()
 
-    assert args.llm == "openai"
+    assert exit_code == 1
+    assert "CODE2SKILL_LLM must be one of openai, claude, qwen" in captured.err
+
+
+def test_invalid_environment_integer_returns_user_facing_error(monkeypatch, capsys) -> None:
+    monkeypatch.setenv("CODE2SKILL_MAX_SKILLS", "many")
+
+    exit_code = main(["scan"])
+    captured = capsys.readouterr()
+
+    assert exit_code == 1
+    assert "CODE2SKILL_MAX_SKILLS must be an integer" in captured.err
 
 
 def test_doctor_parser_defaults_repo_path_to_current_directory() -> None:

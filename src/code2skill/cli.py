@@ -154,8 +154,8 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    parser = build_parser()
     try:
+        parser = build_parser()
         args = parser.parse_args(argv)
         return _run_command(parser, args)
     except KeyboardInterrupt:
@@ -334,20 +334,25 @@ def _print_stderr(message: str) -> None:
 
 
 def _env_choice(name: str, default: str, choices: tuple[str, ...]) -> str:
-    value = os.getenv(name, "").strip().lower()
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
+        return default
+    value = raw_value.strip().lower()
     if value in choices:
         return value
-    return default
+    raise ValueError(
+        f"{name} must be one of {', '.join(choices)}; got {raw_value!r}."
+    )
 
 
 def _env_int(name: str, default: int) -> int:
-    value = os.getenv(name, "").strip()
-    if not value:
+    raw_value = os.getenv(name)
+    if raw_value is None or not raw_value.strip():
         return default
     try:
-        return int(value)
+        return int(raw_value.strip())
     except ValueError:
-        return default
+        raise ValueError(f"{name} must be an integer; got {raw_value!r}.") from None
 
 
 def _env_optional(name: str) -> str | None:

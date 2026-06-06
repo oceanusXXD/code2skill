@@ -13,11 +13,14 @@ python -m pip install -e .[dev]
 
 Run these before opening a pull request:
 
-```bash
+```powershell
+if (Test-Path dist) { Remove-Item -Recurse -Force dist }
 python -m pytest -q
-python -m build
+python -m build --sdist --wheel
 python -m twine check dist/*
 ```
+
+On non-Windows shells, use `rm -rf dist` before the build.
 
 ## Repository Areas
 
@@ -31,6 +34,7 @@ python -m twine check dist/*
 - keep changes scoped and reviewable
 - add or update tests for behavior changes
 - update docs when command behavior, API shape, or release process changes
+- for user-facing changes, state the target persona and business scenario being improved
 - update `CHANGELOG.md` and add `docs/releases/vX.Y.Z.md` when preparing a release
 
 ## Release Update Steps

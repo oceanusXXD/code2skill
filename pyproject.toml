@@ -57,6 +57,8 @@ Repository = "https://github.com/oceanusXXD/code2skill"
 Documentation = "https://github.com/oceanusXXD/code2skill#readme"
 Issues = "https://github.com/oceanusXXD/code2skill/issues"
 Changelog = "https://github.com/oceanusXXD/code2skill/blob/main/CHANGELOG.md"
+Contributing = "https://github.com/oceanusXXD/code2skill/blob/main/CONTRIBUTING.md"
+Security = "https://github.com/oceanusXXD/code2skill/blob/main/SECURITY.md"
 
 [project.optional-dependencies]
 test = [

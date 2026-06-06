@@ -12,7 +12,13 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 - Added OpenAI-compatible Responses endpoint configuration through `CODE2SKILL_OPENAI_BASE_URL`.
 - Improved Skill planning and writing prompts to avoid documentation/packaging-only pseudo-skills and produce more maintainer-oriented guidance.
 - Improved PyPI-facing README content, package metadata, and sdist documentation inclusion.
+- Added explicit user personas and business scenarios to README/use-case documentation.
+- Hardened `adapt` to reject incomplete generated Skill directories before writing target files.
+- Hardened `doctor --target cursor` to require the copy manifest used for stale generated-rule cleanup.
+- Hardened CLI environment variable parsing to report invalid values instead of silently falling back to defaults.
+- Restricted sdist docs inclusion to public docs and release notes, excluding internal planning docs.
 - Fixed cost-estimate assumption text that rendered as mojibake in CLI/report output.
+- Fixed LLM invalid-JSON responses to produce a clear runtime error.
 - Fixed incremental generation to replan when affected Skills are missing from the existing plan.
 
 ## v0.1.7

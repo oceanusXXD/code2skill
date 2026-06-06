@@ -124,3 +124,11 @@ def test_runtime_version_matches_pyproject_metadata() -> None:
         == "code2skill.version.__version__"
     )
     assert __version__ == "0.1.7"
+
+
+def test_manifest_keeps_internal_planning_docs_out_of_sdist() -> None:
+    manifest = (ROOT / "MANIFEST.in").read_text(encoding="utf-8")
+
+    assert "recursive-include docs *.md" not in manifest
+    assert "prune docs/superpowers" in manifest
+    assert "recursive-include docs/releases *.md" in manifest

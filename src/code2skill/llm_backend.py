@@ -208,7 +208,10 @@ def _post_json(
     except error.URLError as exc:
         raise RuntimeError(f"LLM request failed: {exc.reason}") from exc
 
-    data = json.loads(raw)
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        raise RuntimeError("LLM response payload was not valid JSON.") from exc
     if not isinstance(data, dict):
         raise RuntimeError("LLM response payload was not a JSON object.")
     return data

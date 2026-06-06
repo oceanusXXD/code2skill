@@ -111,6 +111,33 @@ def test_adapt_cursor_copy_preserves_unmanaged_markdown_rules(tmp_path: Path) ->
     assert (cursor_rules / "team-rule.md").read_text(encoding="utf-8") == "# Team Rule\n"
 
 
+def test_adapt_rejects_empty_skill_directory(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    skills_dir = repo_path / ".code2skill" / "skills"
+    skills_dir.mkdir(parents=True)
+
+    try:
+        adapt_skills(target="codex", source_dir=skills_dir, destination_root=repo_path)
+    except ValueError as exc:
+        assert "expected index.md and at least one Skill .md file" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("adapt_skills should reject an empty generated skills directory")
+
+
+def test_adapt_rejects_index_without_skill_files(tmp_path: Path) -> None:
+    repo_path = tmp_path / "repo"
+    skills_dir = repo_path / ".code2skill" / "skills"
+    skills_dir.mkdir(parents=True)
+    (skills_dir / "index.md").write_text("# Index\n", encoding="utf-8")
+
+    try:
+        adapt_skills(target="codex", source_dir=skills_dir, destination_root=repo_path)
+    except ValueError as exc:
+        assert "Run `code2skill scan .` without `--structure-only` first" in str(exc)
+    else:  # pragma: no cover - assertion clarity
+        raise AssertionError("adapt_skills should reject a source with no Skill files")
+
+
 def _write_skills(repo_path: Path) -> Path:
     skills_dir = repo_path / ".code2skill" / "skills"
     skills_dir.mkdir(parents=True)

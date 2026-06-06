@@ -21,6 +21,7 @@ def adapt_skills(
     source_path = _resolve_path(destination_root_path, source_dir)
     if not source_path.exists() or not source_path.is_dir():
         raise FileNotFoundError(f"Skill directory does not exist: {source_path}")
+    _validate_skill_source(source_path)
 
     written: list[Path] = []
     for target_definition in get_target_definitions(target):
@@ -37,6 +38,20 @@ def _resolve_path(root: Path, candidate: Path | str) -> Path:
     if path.is_absolute():
         return path.resolve()
     return (root / path).resolve()
+
+
+def _validate_skill_source(source_dir: Path) -> None:
+    index_path = source_dir / "index.md"
+    skill_files = [
+        path
+        for path in source_dir.glob("*.md")
+        if path.name != "index.md"
+    ]
+    if not index_path.is_file() or not skill_files:
+        raise ValueError(
+            "Generated skills directory is incomplete: expected index.md and at least "
+            "one Skill .md file. Run `code2skill scan .` without `--structure-only` first."
+        )
 
 
 def _copy_skills(source_dir: Path, destination_dir: Path) -> list[Path]:

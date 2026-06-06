@@ -285,11 +285,8 @@ def _check_target_outputs(repo_root: Path, target: str, skills_dir: Path) -> lis
             checks.append(_check_copy_target(definition.name, destination, skills_dir))
             continue
         else:
-            ok = (
-                destination.is_file()
-                and MANAGED_BLOCK_START in destination.read_text(encoding="utf-8")
-                and MANAGED_BLOCK_END in destination.read_text(encoding="utf-8")
-            )
+            content = destination.read_text(encoding="utf-8") if destination.is_file() else ""
+            ok = MANAGED_BLOCK_START in content and MANAGED_BLOCK_END in content
         checks.append(
             AdoptionCheck(
                 name=f"target_{definition.name}",
@@ -351,23 +348,32 @@ def _check_copy_target(name: str, destination: Path, skills_dir: Path) -> Adopti
         )
 
     manifest_path = destination / COPY_MANIFEST_NAME
-    if manifest_path.is_file():
-        try:
-            manifest_names = _read_copy_manifest(manifest_path)
-        except ValueError as exc:
-            return AdoptionCheck(
-                name=f"target_{name}",
-                status="invalid",
-                message=str(exc),
-                path=manifest_path,
-            )
-        if manifest_names != expected_names:
-            return AdoptionCheck(
-                name=f"target_{name}",
-                status="invalid",
-                message=f"{name} target manifest does not match current generated Skills.",
-                path=manifest_path,
-            )
+    if not manifest_path.is_file():
+        return AdoptionCheck(
+            name=f"target_{name}",
+            status="missing",
+            message=(
+                f"{name} target manifest is missing. Run `code2skill adapt . --target {name}` "
+                "so stale generated files can be tracked safely."
+            ),
+            path=manifest_path,
+        )
+    try:
+        manifest_names = _read_copy_manifest(manifest_path)
+    except ValueError as exc:
+        return AdoptionCheck(
+            name=f"target_{name}",
+            status="invalid",
+            message=str(exc),
+            path=manifest_path,
+        )
+    if manifest_names != expected_names:
+        return AdoptionCheck(
+            name=f"target_{name}",
+            status="invalid",
+            message=f"{name} target manifest does not match current generated Skills.",
+            path=manifest_path,
+        )
 
     return AdoptionCheck(
         name=f"target_{name}",

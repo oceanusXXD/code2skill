@@ -1,12 +1,21 @@
 # Use Cases
 
-`code2skill` is designed around three practical adoption scenarios for Python repositories.
+`code2skill` is built for maintainers who want AI coding assistants to work from the same repository knowledge that humans can review in Git.
 
-## 1. First Repository Knowledge Layer
+## Primary Personas
 
-### Problem
+| Persona | Repository pain | Desired outcome |
+|---|---|---|
+| Python maintainer | AI tools miss local boundaries, style, and workflow contracts | Generated Skills describe how to modify the current codebase |
+| DevEx or platform owner | Each team writes different AI rules, often by hand | One repeatable workflow standardizes assistant context across services |
+| Open-source maintainer | Contributors bring different tools and private chat context | Public, committed AI instructions make project expectations auditable |
+| AI tooling evaluator | A repository needs to compare Codex, Cursor, Claude Code, Copilot, and Windsurf | One Skill layer can be adapted into every supported target |
 
-AI coding assistants enter a repository with incomplete context. They read README files, scattered docs, previous code, and chat history, but those sources are not structured as stable implementation guidance.
+## Scenario 1: First Repository Knowledge Layer
+
+### Trigger
+
+A Python repository is adopting an AI coding assistant and needs a durable project entry point.
 
 ### Workflow
 
@@ -18,22 +27,22 @@ code2skill adapt . --target codex
 code2skill doctor . --target codex
 ```
 
-### Output
+### Outputs
 
 - `.code2skill/adoption-guide.md`
 - `.code2skill/skills/index.md`
 - `.code2skill/skills/*.md`
 - `AGENTS.md` or another target instruction file
 
-### Business Value
+### Success Signal
 
-The team gets a reviewable AI-facing project entry point that can be committed and maintained like normal repository documentation.
+`doctor` reports `ready: true`, generated Skills are reviewable, and the target instruction file can be committed.
 
-## 2. Pull Request And CI Refresh
+## Scenario 2: Pull Request And CI Refresh
 
-### Problem
+### Trigger
 
-AI-facing project knowledge becomes stale when code changes. Manually updating tool-specific rules is easy to skip, and full regeneration on every PR can be wasteful.
+Code changes may invalidate existing AI-facing project knowledge.
 
 ### Workflow
 
@@ -43,22 +52,22 @@ code2skill adapt . --target codex
 code2skill doctor . --target codex
 ```
 
-### Output
+### Outputs
 
 - refreshed Skill files when affected
 - refreshed target instruction files
-- `.code2skill/report.json` showing mode, changed files, affected files, affected Skills, and written artifacts
+- `.code2skill/report.json` with execution mode, changed files, affected files, affected Skills, and written artifacts
 - `.code2skill/state/analysis-state.json` for later incremental reuse
 
-### Business Value
+### Success Signal
 
-Teams can make AI knowledge maintenance part of the normal PR loop, with clear evidence for what changed and why.
+The PR shows exactly which AI-facing artifacts changed and why.
 
-## 3. One Knowledge Source For Multiple AI Tools
+## Scenario 3: One Knowledge Source For Multiple AI Tools
 
-### Problem
+### Trigger
 
-Codex, Claude Code, Cursor, GitHub Copilot, and Windsurf all expect different instruction-file locations or formats. Maintaining each by hand creates drift.
+A team uses more than one AI coding assistant and wants consistent project context across tools.
 
 ### Workflow
 
@@ -68,7 +77,7 @@ code2skill adapt . --target all
 code2skill doctor . --target all
 ```
 
-### Output
+### Outputs
 
 - `AGENTS.md`
 - `CLAUDE.md`
@@ -76,15 +85,15 @@ code2skill doctor . --target all
 - `.github/copilot-instructions.md`
 - `.windsurfrules`
 
-### Business Value
+### Success Signal
 
-The repository owns one generated Skill layer and publishes consistent context to every supported assistant.
+All supported target files are generated from the same Skill layer, and `doctor --target all` reports readiness.
 
-## 4. Platform Or DevEx Automation
+## Scenario 4: Platform Or DevEx Automation
 
-### Problem
+### Trigger
 
-Platform teams may need to run the same repository-knowledge workflow across multiple Python services without shelling out manually.
+A platform team needs to run the same repository-knowledge workflow across multiple Python services.
 
 ### Workflow
 
@@ -99,9 +108,29 @@ for repo in repositories:
         raise RuntimeError((repo, readiness.next_steps))
 ```
 
-### Business Value
+### Success Signal
 
-The same workflow can be embedded into internal automation while preserving the same artifact layout and readiness checks as the CLI.
+Automation can make a binary decision from structured readiness data instead of scraping free-form command output.
+
+## Scenario 5: Open-Source Contributor Onboarding
+
+### Trigger
+
+An open-source project wants new contributors and AI assistants to share the same implementation rules before a change is proposed.
+
+### Workflow
+
+```bash
+code2skill scan . --llm qwen --model qwen-plus-latest
+code2skill adapt . --target codex
+code2skill doctor . --target codex
+```
+
+Then link the generated target file and `.code2skill/skills/index.md` from contributor documentation.
+
+### Success Signal
+
+Contributors can inspect the same AI-facing project guidance that maintainers review and commit.
 
 ## Selection Guide
 
@@ -111,3 +140,4 @@ The same workflow can be embedded into internal automation while preserving the 
 | PR refresh | `ci --mode auto` | `adapt` | `doctor` |
 | Multi-tool publishing | `scan` | `adapt --target all` | `doctor --target all` |
 | Platform automation | Python API | `run_ci`, `adapt_repository` | `doctor` |
+| Open-source onboarding | `scan` | docs link plus `adapt` | `doctor` |
