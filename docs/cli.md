@@ -5,7 +5,7 @@
 - `scan`: build repository analysis and, unless structure-only, generate Skills
 - `estimate`: preview cost and impact without generating Skills or state
 - `ci`: run automation-friendly full or incremental refresh
-- `adapt`: publish generated Skills to target AI tool instruction files
+- `adapt`: publish generated Skills to target tool instruction files
 - `doctor`: verify that the bundle and optional target output are ready to use
 
 `repo_path` is optional for every command and defaults to `.`. Relative paths are resolved from the target repository root, so you can run the CLI from inside or outside the repository.

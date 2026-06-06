@@ -8,17 +8,17 @@ def render_adoption_guide(blueprint: SkillBlueprint) -> str:
     lines = [
         "# Adoption Guide",
         "",
-        "## Business Scenario",
+        "## Repository Scenario",
         (
             f"This repository is classified as a `{profile.repo_type}` Python project. "
-            "Use the generated Skill layer as the shared AI-facing repository context "
-            "for local agents, IDE assistants, and CI automation."
+            "Use the generated Skill layer as the project instruction source for "
+            "local coding assistants, IDE rules, and CI checks."
         ),
         "",
         "## Intended Users",
-        "- Repository maintainers who want AI assistants to follow current project boundaries.",
-        "- DevEx or platform owners standardizing AI coding tool instructions across a team.",
-        "- Teams that need reviewable, commit-friendly repository knowledge instead of chat history.",
+        "- Repository maintainers who want assistants to follow current project boundaries.",
+        "- DevEx or platform owners standardizing coding-tool instructions across a team.",
+        "- Teams that want project instructions stored as files instead of chat context.",
         "",
         "## First Adoption Workflow",
         "1. Run `code2skill estimate .` to preview selected files, impact, and generation cost.",
@@ -30,7 +30,7 @@ def render_adoption_guide(blueprint: SkillBlueprint) -> str:
         "## What To Review",
         "- `.code2skill/adoption-guide.md`: this adoption checklist.",
         "- `.code2skill/project-summary.md`: human-readable repository summary.",
-        "- `.code2skill/skills/index.md` and `.code2skill/skills/*.md`: final AI-facing Skill products.",
+        "- `.code2skill/skills/index.md` and `.code2skill/skills/*.md`: generated Skill files.",
         "- `.code2skill/report.json`: selected files, mode decisions, costs, and affected Skills.",
         "- Adapted target files such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules`.",
         "",

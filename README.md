@@ -4,41 +4,42 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/code2skill)](https://pypi.org/project/code2skill/)
 [![License](https://img.shields.io/pypi/l/code2skill)](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE)
 
-Chinese documentation: [README.zh-CN.md](https://github.com/oceanusXXD/code2skill/blob/main/README.zh-CN.md).
+Language: English | [简体中文](https://github.com/oceanusXXD/code2skill/blob/main/README.zh-CN.md)
 
-`code2skill` compiles a Python repository into reviewable AI working instructions.
+`code2skill` turns a Python repository into instruction files for coding assistants.
 
-It reads real source-code evidence, builds a repository blueprint, asks an LLM to plan and write focused Skills, and can publish the same knowledge to Codex, Claude Code, Cursor, GitHub Copilot, and Windsurf. The result is a committed, testable instruction layer instead of stale chat context or scattered hand-written rules.
+It scans source code and configuration, writes a `.code2skill/` bundle, generates focused Skill documents, and publishes them to Codex, Claude Code, Cursor, GitHub Copilot, or Windsurf. The files stay in the repository, so maintainers can review them, run them in CI, and update them when code changes.
 
-Use it when a Python project needs AI coding assistants to understand current module boundaries, workflows, contracts, and maintenance rules from the code that actually exists.
+Use it when a Python project needs coding assistants to follow the current module boundaries, workflows, API contracts, and maintenance rules.
 
-## What It Solves
+## What This Repository Can Do
 
-- Turns repository structure and source evidence into AI-ready Skills.
-- Keeps generated knowledge reviewable in Git and refreshable in CI.
-- Publishes one Skill layer to several AI coding tools.
-- Preserves hand-written target-file content through managed blocks.
-- Validates generated bundles and adapted tool files with `doctor`.
-- Supports OpenAI Responses API, OpenAI-compatible Responses endpoints, Claude, and Qwen.
+- Analyze a Python repository with AST parsing, import graph checks, config extraction, and file-role inference.
+- Write a `.code2skill/` bundle with a project summary, references, a Skill plan, generated Skills, a report, and incremental state.
+- Estimate model cost and affected Skills before generation.
+- Generate Skill Markdown from repository evidence using OpenAI Responses API, OpenAI-compatible Responses endpoints, Claude, or Qwen.
+- Publish generated Skills into `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules`.
+- Refresh outputs in CI with full or incremental mode.
+- Validate the bundle and target files with `doctor`.
 
-## Who Uses It
+## Who It Is For
 
-| User profile | What they need | How code2skill helps |
+| User | Need | What code2skill provides |
 |---|---|---|
-| Python maintainers | AI assistants that respect current module boundaries and extension patterns | Generates evidence-backed Skills from source code and keeps them reviewable |
-| DevEx and platform teams | A repeatable way to standardize AI coding context across many repositories | Exposes CLI, Python API, CI refresh, and readiness checks |
-| Open-source maintainers | Contributor-facing AI instructions that can be audited like normal docs | Writes committed artifacts and target files instead of relying on private chat history |
-| AI tooling evaluators | One repository knowledge layer that works across several assistants | Publishes the same Skills to Codex, Claude Code, Cursor, GitHub Copilot, and Windsurf |
+| Python maintainers | Assistants should follow local architecture and naming patterns | Source-based Skill files and readiness checks |
+| DevEx and platform teams | Several services need the same assistant setup process | CLI, Python API, CI refresh, and shared output layout |
+| Open-source maintainers | Contributors need public project instructions instead of untracked notes | Committed files that can be reviewed with the rest of the repo |
+| Tooling evaluators | One repository needs to work with several coding assistants | One generated Skill layer adapted into multiple target formats |
 
-## Business Scenarios
+## Common Scenarios
 
-| Scenario | Trigger | Success signal |
+| Scenario | When to use it | Expected result |
 |---|---|---|
-| First AI adoption | A repository starts using Codex, Cursor, Claude Code, Copilot, or Windsurf | `scan`, `adapt`, and `doctor` produce a ready target file |
-| PR knowledge refresh | Code changes may invalidate existing AI instructions | `ci --mode auto` reports affected files and affected Skills |
-| Multi-tool rollout | A team uses more than one AI coding assistant | `adapt --target all` writes consistent target outputs |
-| Platform automation | A DevEx team runs repository-knowledge checks across many services | Python API returns structured results and readiness status |
-| Open-source contributor onboarding | New contributors need implementation rules before changing code | Generated Skills and README/docs explain the repo's working contracts |
+| First assistant setup | A repo starts using Codex, Cursor, Claude Code, Copilot, or Windsurf | `scan`, `adapt`, and `doctor` produce a ready target file |
+| Pull request refresh | Code changes may make previous instructions stale | `ci --mode auto` reports changed files, affected files, and affected Skills |
+| Multi-tool setup | A team uses more than one coding assistant | `adapt --target all` writes consistent target files |
+| Platform automation | A DevEx team runs the workflow across many Python services | Python API returns structured results and readiness status |
+| Contributor onboarding | New contributors need project-specific implementation rules | Generated Skills and docs describe the repo's working contracts |
 
 ## Install
 
@@ -231,6 +232,8 @@ For lower-level automation, use `create_scan_config(...)` with `scan_repository(
 
 ## Documentation
 
+- English README: [README.md](https://github.com/oceanusXXD/code2skill/blob/main/README.md)
+- Chinese README: [README.zh-CN.md](https://github.com/oceanusXXD/code2skill/blob/main/README.zh-CN.md)
 - [Getting Started](https://github.com/oceanusXXD/code2skill/blob/main/docs/getting-started.md)
 - [Use Cases](https://github.com/oceanusXXD/code2skill/blob/main/docs/use-cases.md)
 - [CLI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/cli.md)
@@ -244,7 +247,7 @@ For lower-level automation, use `create_scan_config(...)` with `scan_repository(
 
 - Python-first analysis using `ast`, import graph analysis, file-role inference, and pattern detection.
 - Evidence-first prompts that require source references and keep uncertainty explicit.
-- Durable outputs written to disk instead of kept in chat history.
+- Outputs written to files instead of kept in chat history.
 - Measurable runs through `report.json`.
 - Incremental operation through state reuse, diff impact, and affected Skill mapping.
 - Readiness validation through `doctor`.

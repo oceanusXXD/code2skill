@@ -4,41 +4,42 @@
 [![Python versions](https://img.shields.io/pypi/pyversions/code2skill)](https://pypi.org/project/code2skill/)
 [![License](https://img.shields.io/pypi/l/code2skill)](https://github.com/oceanusXXD/code2skill/blob/main/LICENSE)
 
-English documentation: [README.md](https://github.com/oceanusXXD/code2skill/blob/main/README.md).
+语言：[English](https://github.com/oceanusXXD/code2skill/blob/main/README.md) | 简体中文
 
-`code2skill` 会把 Python 仓库编译成可审阅、可提交、可在 CI 中刷新的 AI 工作说明。
+`code2skill` 会把 Python 仓库转换成编码助手可以读取的项目说明文件。
 
-它读取真实源码证据，生成仓库结构蓝图，再调用 LLM 规划并写出聚焦的 Skills，最后可以把同一套知识发布到 Codex、Claude Code、Cursor、GitHub Copilot 和 Windsurf。输出是落盘文件，不是一次性的聊天上下文。
+它会扫描源码和配置，写出 `.code2skill/` 产物目录，生成聚焦的 Skill 文档，并发布到 Codex、Claude Code、Cursor、GitHub Copilot 或 Windsurf。产物都是仓库文件，维护者可以审阅、提交、在 CI 中刷新。
 
-当你的 Python 项目希望 AI 编程助手理解当前模块边界、工作流、接口契约和维护规则时，就适合使用 `code2skill`。
+当一个 Python 项目希望编码助手遵守当前模块边界、工作流、API 契约和维护规则时，可以使用 `code2skill`。
 
-## 解决什么问题
+## 这个仓库可以做什么
 
-- 把仓库结构和源码证据转换成 AI 可用的 Skills。
-- 让 AI-facing 知识进入 Git 审阅，并能在 CI 中刷新。
-- 用同一套 Skill 层发布到多个 AI 编程工具。
-- 通过托管区块保留目标文件中的手写内容。
-- 用 `doctor` 校验 bundle、Skill plan、state 和目标工具文件是否可用。
-- 支持 OpenAI Responses API、OpenAI-compatible Responses endpoint、Claude 和 Qwen。
+- 用 AST、import graph、配置抽取和文件角色推断分析 Python 仓库。
+- 写出 `.code2skill/` bundle，包括项目概要、参考文档、Skill plan、生成的 Skills、执行报告和增量 state。
+- 在生成前估算模型成本和受影响 Skills。
+- 使用 OpenAI Responses API、OpenAI-compatible Responses endpoint、Claude 或 Qwen，从仓库证据生成 Skill Markdown。
+- 把生成的 Skills 发布到 `AGENTS.md`、`CLAUDE.md`、`.cursor/rules/*`、`.github/copilot-instructions.md` 和 `.windsurfrules`。
+- 在 CI 中用 full 或 incremental 模式刷新产物。
+- 用 `doctor` 校验 bundle 和目标工具文件是否可用。
 
-## 用户画像
+## 适合谁
 
-| 用户画像 | 需要什么 | code2skill 如何帮助 |
+| 用户 | 需求 | code2skill 提供什么 |
 |---|---|---|
-| Python 仓库维护者 | AI 助手遵守当前模块边界和扩展方式 | 从源码证据生成可审阅 Skills |
-| DevEx 和平台团队 | 在多个仓库中标准化 AI 编程上下文 | 提供 CLI、Python API、CI 刷新和可用性校验 |
-| 开源维护者 | 像审阅普通文档一样审阅 contributor-facing AI 说明 | 把知识写入可提交文件，而不是留在私有聊天记录 |
-| AI tooling 评估者 | 一套仓库知识发布到多个 AI 助手 | 同一套 Skills 可适配 Codex、Claude Code、Cursor、GitHub Copilot 和 Windsurf |
+| Python 仓库维护者 | 编码助手需要遵守本地架构和命名方式 | 基于源码生成 Skills，并提供 readiness 检查 |
+| DevEx 和平台团队 | 多个服务需要统一的助手接入流程 | CLI、Python API、CI 刷新和统一输出结构 |
+| 开源维护者 | 贡献者需要公开的项目规则，而不是私有聊天上下文 | 可提交、可审阅的项目说明文件 |
+| 工具评估者 | 同一个仓库需要支持多个编码助手 | 一套 Skill 层适配多个目标格式 |
 
-## 业务场景
+## 常见场景
 
-| 场景 | 触发条件 | 成功信号 |
+| 场景 | 什么时候用 | 预期结果 |
 |---|---|---|
-| 首次 AI 接入 | 仓库开始使用 Codex、Cursor、Claude Code、Copilot 或 Windsurf | `scan`、`adapt`、`doctor` 产出 ready 的目标文件 |
-| PR 知识刷新 | 代码改动可能让 AI 说明过期 | `ci --mode auto` 报告 affected files 和 affected Skills |
-| 多工具 rollout | 团队同时使用多个 AI 编程助手 | `adapt --target all` 写出一致的目标工具文件 |
-| 平台自动化 | DevEx 团队跨多个服务运行仓库知识检查 | Python API 返回结构化结果和 readiness |
-| 开源 contributor onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 README/docs 明确仓库工作契约 |
+| 首次接入编码助手 | 仓库开始使用 Codex、Cursor、Claude Code、Copilot 或 Windsurf | `scan`、`adapt`、`doctor` 产出 ready 的目标文件 |
+| PR 刷新 | 代码改动可能让旧说明过期 | `ci --mode auto` 报告 changed files、affected files 和 affected Skills |
+| 多工具接入 | 团队同时使用多个编码助手 | `adapt --target all` 写出一致的目标文件 |
+| 平台自动化 | DevEx 团队跨多个 Python 服务运行同一流程 | Python API 返回结构化结果和 readiness |
+| 开源贡献者 onboarding | 新贡献者改代码前需要项目实现规则 | 生成的 Skills 和 docs 说明仓库的工作契约 |
 
 ## 安装
 
@@ -60,7 +61,7 @@ python -m code2skill --help
 
 ## 第一次运行
 
-先跑一次不调用 LLM 的结构检查，确认包能读取仓库并写出本地产物：
+先跑一次不调用模型的结构检查，确认包能读取仓库并写出本地产物：
 
 ```bash
 code2skill scan . --structure-only
@@ -79,13 +80,13 @@ export QWEN_API_KEY=...
 code2skill scan . --llm qwen --model qwen-plus-latest
 ```
 
-把生成的 Skill 层发布到目标 AI 工具：
+发布到目标工具：
 
 ```bash
 code2skill adapt . --target codex
 ```
 
-检查 bundle 和目标文件是否已经可用：
+检查 bundle 和目标文件是否可用：
 
 ```bash
 code2skill doctor . --target codex
@@ -143,13 +144,13 @@ code2skill scan .
 
 ## 命令
 
-| 命令 | 调用 LLM | 写文件 | 主要用途 |
+| 命令 | 调用模型 | 写文件 | 主要用途 |
 |---|---:|---:|---|
 | `scan` | 是，除非 `--structure-only` | 是 | 本地全量分析和 Skill 生成 |
 | `estimate` | 否 | 只写 `report.json` | 成本和影响预览 |
 | `ci` | 是，除非 `--structure-only` | 是 | 面向自动化的全量或增量刷新 |
-| `adapt` | 否 | 是 | 把 generated Skills 发布到目标 AI 工具文件 |
-| `doctor` | 否 | 否 | 校验 bundle、Skill plan、state、目标文件和可用性 |
+| `adapt` | 否 | 是 | 把 generated Skills 发布到目标工具文件 |
+| `doctor` | 否 | 否 | 校验 bundle、Skill plan、state、目标文件和 readiness |
 
 ## 输出结构
 
@@ -160,10 +161,10 @@ code2skill scan .
 | `adoption-guide.md` | 仓库级采用 checklist 和下一步工作流 |
 | `project-summary.md` | 面向人的仓库概要 |
 | `skill-blueprint.json` | 结构化仓库蓝图 |
-| `skill-plan.json` | LLM 规划出的 Skill 清单 |
+| `skill-plan.json` | 模型规划出的 Skill 清单 |
 | `references/*.md` | 架构、风格、工作流和 API 参考 |
 | `skills/index.md` | 生成的 Skill 索引 |
-| `skills/*.md` | 生成的 AI 工作说明 |
+| `skills/*.md` | 生成的编码助手工作说明 |
 | `report.json` | 执行指标、成本估算、变更文件、受影响 Skills 和产物列表 |
 | `state/analysis-state.json` | 增量 CI 缓存 |
 
@@ -231,6 +232,8 @@ print(readiness.ready, readiness.score)
 
 ## 文档
 
+- English README: [README.md](https://github.com/oceanusXXD/code2skill/blob/main/README.md)
+- 中文 README: [README.zh-CN.md](https://github.com/oceanusXXD/code2skill/blob/main/README.zh-CN.md)
 - [Getting Started](https://github.com/oceanusXXD/code2skill/blob/main/docs/getting-started.md)
 - [Use Cases](https://github.com/oceanusXXD/code2skill/blob/main/docs/use-cases.md)
 - [CLI Guide](https://github.com/oceanusXXD/code2skill/blob/main/docs/cli.md)
@@ -244,10 +247,10 @@ print(readiness.ready, readiness.score)
 
 - Python-first 分析：使用 `ast`、import graph、文件角色推断和模式检测。
 - Evidence-first prompt：要求源码引用，避免无证据结论，并显式保留不确定性。
-- 持久化输出：仓库知识写入文件，而不是留在聊天上下文中。
-- 可度量执行：每次运行写出 `report.json`。
-- 增量执行：复用 state、diff impact 和受影响 Skill 映射。
-- 可用性校验：通过 `doctor` 检查 bundle 与目标文件。
+- 产物写入文件，而不是留在聊天上下文中。
+- 每次运行写出 `report.json`，便于复查。
+- 支持 state、diff impact 和受影响 Skill 映射。
+- 通过 `doctor` 检查 bundle 与目标文件。
 
 ## 限制
 

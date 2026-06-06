@@ -1,6 +1,6 @@
 # Python API
 
-`code2skill` can be used as a Python package as well as a CLI. The Python API follows the same product workflow: preview, scan, adapt, validate, and refresh in CI.
+`code2skill` can be used as a Python package as well as a CLI. The Python API follows the same workflow as the CLI: preview, scan, adapt, validate, and refresh in CI.
 
 The supported high-level API is available from `code2skill.api` and re-exported from the package root.
 

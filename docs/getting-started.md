@@ -1,6 +1,6 @@
 # Getting Started
 
-This guide takes a Python repository from no generated AI context to a checked, reviewable Skill layer.
+This guide takes a Python repository from no generated instruction files to a checked Skill layer.
 
 ## 1. Install
 
@@ -61,7 +61,7 @@ Review:
 - `.code2skill/skills/*.md`
 - `.code2skill/skill-plan.json`
 
-Generated Skills should be grounded in the files shown in the plan and should keep uncertainty explicit when evidence is weak.
+Generated Skills should cite the files shown in the plan and mark weak evidence instead of guessing.
 
 ## 5. Publish To An AI Tool
 

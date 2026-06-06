@@ -36,7 +36,7 @@ def build_parser() -> argparse.ArgumentParser:
         prog="code2skill",
         description=(
             "Compile Python repository knowledge into reviewable Skills, "
-            "incremental CI artifacts, and AI tool instruction files."
+            "incremental CI artifacts, and target tool instruction files."
         ),
         epilog=(
             "Examples:\n"

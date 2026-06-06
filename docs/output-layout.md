@@ -2,7 +2,7 @@
 
 By default, `code2skill` writes workflow artifacts under `.code2skill/` inside the target repository.
 
-This bundle separates final AI-facing Skill products from intermediate artifacts used for review, diagnostics, cost reporting, and incremental CI refresh.
+This bundle separates generated Skill files from intermediate artifacts used for diagnostics, cost reporting, and incremental CI refresh.
 
 ```text
 .code2skill/
@@ -28,7 +28,7 @@ This bundle separates final AI-facing Skill products from intermediate artifacts
 ### Final Product Artifacts
 
 - `skills/index.md`: the generated Skill inventory.
-- `skills/*.md`: grounded AI-consumable Skill documents.
+- `skills/*.md`: Skill documents generated from repository evidence.
 - target files written by `adapt`, such as `AGENTS.md`, `CLAUDE.md`, `.cursor/rules/*`, `.github/copilot-instructions.md`, and `.windsurfrules`.
 
 ### Review And Diagnostic Artifacts
@@ -50,7 +50,7 @@ This bundle separates final AI-facing Skill products from intermediate artifacts
 | `estimate` | `report.json` only | No | No | No | Cost and impact preview |
 | `ci --structure-only` | Yes | No | Yes | No | No-LLM CI sanity check |
 | `ci` | Yes | Yes, when full or affected | Yes | No | Automated refresh |
-| `adapt` | No | No | No | Yes | Publish generated Skills to AI tools |
+| `adapt` | No | No | No | Yes | Publish generated Skills to target tool files |
 | `doctor` | No | No | No | No | Validate readiness |
 
 ## What To Commit

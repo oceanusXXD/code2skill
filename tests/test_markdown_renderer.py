@@ -20,11 +20,11 @@ def test_project_summary_includes_directory_section_when_entrypoints_exist() -> 
     assert "- src: 2 files;" in rendered
 
 
-def test_adoption_guide_explains_business_workflow_and_readiness_check() -> None:
+def test_adoption_guide_explains_repository_workflow_and_readiness_check() -> None:
     rendered = render_adoption_guide(_sample_blueprint())
 
     assert "# Adoption Guide" in rendered
-    assert "## Business Scenario" in rendered
+    assert "## Repository Scenario" in rendered
     assert "Run `code2skill estimate .`" in rendered
     assert "Run `code2skill doctor . --target codex`" in rendered
     assert "`backend`" in rendered

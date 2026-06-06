@@ -13,6 +13,7 @@ Detailed notes for each tagged release live under [`docs/releases/`](./docs/rele
 - Improved Skill planning and writing prompts to avoid documentation/packaging-only pseudo-skills and produce more maintainer-oriented guidance.
 - Improved PyPI-facing README content, package metadata, and sdist documentation inclusion.
 - Added explicit user personas and business scenarios to README/use-case documentation.
+- Clarified English/Chinese README entry points and rewrote public docs with more direct maintainer-facing language.
 - Hardened `adapt` to reject incomplete generated Skill directories before writing target files.
 - Hardened `doctor --target cursor` to require the copy manifest used for stale generated-rule cleanup.
 - Hardened CLI environment variable parsing to report invalid values instead of silently falling back to defaults.

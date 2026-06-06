@@ -1,6 +1,6 @@
 # CI Guide
 
-`code2skill ci --mode auto` is the automation-oriented entrypoint for keeping AI-facing repository knowledge current as code changes.
+`code2skill ci --mode auto` refreshes generated repository instructions as code changes.
 
 Auto mode uses the previous `.code2skill/state/analysis-state.json`, the previous `skill-plan.json`, and the current diff to choose between a full rebuild and an incremental refresh.
 
@@ -132,7 +132,7 @@ If these conditions are missing or invalid, `code2skill` falls back to a full re
 
 ## PR Review Strategy
 
-Review these files when a PR changes generated repository knowledge:
+Review these files when a PR changes generated instruction files:
 
 - `.code2skill/adoption-guide.md`
 - `.code2skill/skills/index.md`
