@@ -65,11 +65,11 @@ test = [
   "pytest>=8.0",
 ]
 release = [
-  "build>=1.5.0",
+  "build>=1.5.1",
   "twine>=6.0",
 ]
 dev = [
-  "build>=1.5.0",
+  "build>=1.5.1",
   "pytest>=8.0",
   "twine>=6.0",
 ]
